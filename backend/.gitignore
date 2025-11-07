@@ -1,0 +1,5 @@
+MeloTTS
+venv
+Test/data
+app/games/data
+.env

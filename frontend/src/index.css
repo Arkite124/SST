@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Gaegu&family=Nanum+Gothic&family=Single+Day&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    border-width: 0;
+}
+
+body {
+    @apply font-main bg-white text-textmain;
+}
+
+@font-face {
+    font-family: 'Juache';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/BMJUA.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+.font-juache {
+    font-family: 'Juache', sans-serif;
+}
+
+/* 커스텀 애니메이션 */
+@keyframes popBounce {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(30px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-5px);
+  }
+  80% {
+    transform: scale(0.95) translateY(0px);
+  }
+  100% {
+    transform: scale(1) translateY(0px);
+  }
+}
+
+.animate-pop-bounce {
+  animation: popBounce 0.5s ease-out forwards;
+}
+
+/* 📅 react-calendar 일요일부터 시작 */
+.react-calendar__month-view__weekdays {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+}
+
+/* 요일 순서를 강제로 일요일부터 시작 */
+.react-calendar__month-view__weekdays__weekday:nth-child(7) {
+  order: -1;
+}
+
+/* 요일 텍스트 스타일 */
+.react-calendar__month-view__weekdays__weekday {
+  font-weight: 600;
+  padding: 0.75rem 0;
+  color: #555;
+  text-align: center;
+}
+
+/* 달력 상단 네비게이션 버튼 */
+.react-calendar__navigation button {
+  font-size: 1.25rem;
+  margin: 0.25rem;
+  padding: 0.5rem 1rem;
+  color: #4E944F;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.react-calendar__navigation button:hover {
+  background-color: #e9efc0;
+}

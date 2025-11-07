@@ -1,0 +1,52 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# 백엔드 환경변수(.env),가상환경(.venv)은 gitignore
+backend/.venv
+*.pem
+
+#ai 유사단어 매칭 관련 데이터모델
+output_kids_words
+backend/Ai/.venv
+#랜덤생성, 더미데이터 파일 가져오게 하는거 x,.env파일 제외
+backend/random_data.py
+backend/dummy_data.sql
+backend/.env
+backend/MeloTTS/
+backend/pw.py
+*.pkl
+*.csv
+*.pt
+backend/Ai/.env
+
+findSimilarWord_backend/data/output_kids_words
+findSimilarWord_backend/.venv
+#pycache git 제거
+__pycache__/
+*.pyc
+.env
+
+#ai 유사단어 매칭 관련 데이터모델
+backend/server_testbackend/MeloTTS/
+
