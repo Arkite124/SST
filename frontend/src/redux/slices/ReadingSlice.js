@@ -2,16 +2,16 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "@/utils/axiosInstance.js";
 
-// 문제 가져오기
+/* ----------------------------------------
+   🔥 문제 가져오기 (userId 제거)
+----------------------------------------- */
 export const fetchQuestions = createAsyncThunk(
     "reading/fetchQuestions",
-    async ({ userId, ageLevel }, { rejectWithValue }) => {
+    async ({ ageLevel }, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.post("/test/reading/start", {
                 num_questions: 10,
                 age_level: ageLevel,
-            }, {
-                params: { user_id: Number(userId) }  // 백엔드에서 user_id 쿼리 파라미터로 받음
             });
             return res.data.questions;
         } catch (err) {
@@ -20,15 +20,18 @@ export const fetchQuestions = createAsyncThunk(
     }
 );
 
+/* ----------------------------------------
+   🔥 정답 제출 (userId 제거)
+----------------------------------------- */
 export const submitAnswer = createAsyncThunk(
     "reading/submitAnswer",
-    async ({ userId, questionData, userChoiceIndex }, { rejectWithValue }) => {
+    async ({ questionData, userChoiceIndex }, { rejectWithValue }) => {
         try {
-            if (!userId || !questionData) {
-                throw new Error("userId 또는 questionData가 없습니다");
+            if (!questionData) {
+                throw new Error("questionData가 없습니다");
             }
+
             const payload = {
-                user_id: Number(userId),
                 question_data: {
                     question_id: Number(questionData.question_id ?? 0),
                     choices: Array.isArray(questionData.choices) ? questionData.choices : [],
@@ -37,44 +40,48 @@ export const submitAnswer = createAsyncThunk(
                     age_level: Number(questionData.age_level ?? 7),
                 },
                 user_choice_index: Number(userChoiceIndex ?? 0),
-            }
+            };
 
             const res = await axiosInstance.post("/test/reading/verify", payload);
 
-            return { ...res.data, questionData, userChoiceIndex };
+            return {
+                ...res.data,
+                questionData,
+                userChoiceIndex
+            };
+
         } catch (err) {
             return rejectWithValue(err.response?.data || "답안 제출 실패");
         }
-
     }
 );
 
-// 게임 종료 (한 번에 DB 저장)
+/* ----------------------------------------
+   🔥 게임 종료 (userId 제거)
+----------------------------------------- */
 export const endGame = createAsyncThunk(
     "reading/endGame",
-    async ({ userId, questionHistory, testType = "reading" }, { rejectWithValue }) => {
+    async ({ questionHistory, testType = "reading" }, { rejectWithValue }) => {
         try {
-            if (!userId || !questionHistory || questionHistory.length === 0) {
-                throw new Error("userId 또는 questionHistory가 없습니다.");
+            if (!questionHistory || questionHistory.length === 0) {
+                throw new Error("questionHistory가 없습니다.");
             }
 
-            // Pydantic 모델에 맞춘 payload
             const payload = {
-                user_id: Number(userId),
                 test_type: testType,
                 question_history: questionHistory.map(q => ({
                     question_id: Number(q.question_id),
                     question: q.question,
                     choices: Array.isArray(q.choices) ? q.choices : [],
-                    userAnswer: q.user_answer ?? "",  // ✅ snake_case로 통일
+                    userAnswer: q.user_answer ?? "",
                     correctAnswer: q.correct_answer ?? q.choices?.[q.correct_index] ?? "",
-                    isCorrect: q.is_correct ?? false,  // ✅ snake_case로 통일
+                    isCorrect: q.is_correct ?? false,
                     age_level: Number(q.age_level ?? 7)
                 }))
             };
 
-
             const res = await axiosInstance.post("/test/reading/end", payload);
+
             return {
                 total_score: res.data.total_score,
                 message: res.data.message
@@ -85,6 +92,9 @@ export const endGame = createAsyncThunk(
     }
 );
 
+/* ----------------------------------------
+   🔥 Slice
+----------------------------------------- */
 const readingSlice = createSlice({
     name: "reading",
     initialState: {
@@ -129,6 +139,7 @@ const readingSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
+
             .addCase(submitAnswer.fulfilled, (state, action) => {
                 const { questionData, userChoiceIndex, correct, correct_answer, user_answer } = action.payload;
 
@@ -136,9 +147,9 @@ const readingSlice = createSlice({
                     question_id: questionData.question_id,
                     question: questionData.question,
                     choices: questionData.choices,
-                    user_answer: user_answer ?? questionData.choices[userChoiceIndex],  // snake_case
-                    correct_answer: correct_answer,  // snake_case
-                    is_correct: correct,  // snake_case
+                    user_answer: user_answer ?? questionData.choices[userChoiceIndex],
+                    correct_answer: correct_answer,
+                    is_correct: correct,
                     age_level: questionData.age_level ?? 7,
                 });
 
@@ -149,6 +160,7 @@ const readingSlice = createSlice({
             .addCase(submitAnswer.rejected, (state, action) => {
                 state.error = action.payload;
             })
+
             .addCase(endGame.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -156,7 +168,6 @@ const readingSlice = createSlice({
             .addCase(endGame.fulfilled, (state, action) => {
                 state.loading = false;
                 state.finished = true;
-                // ⚡ 백엔드에서 반환하는 total_score 사용
                 state.feedback = `게임 종료! 점수: ${action.payload.total_score} / ${state.questions.length}`;
             })
             .addCase(endGame.rejected, (state, action) => {

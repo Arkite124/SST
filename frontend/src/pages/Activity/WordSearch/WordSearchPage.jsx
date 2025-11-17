@@ -21,7 +21,6 @@ export default function WordSearchPage() {
 
         try {
             const data = await getWordSearchResult(query);
-            console.log("🔍 검색 결과:", data);
             setResult(data);
         } catch (err) {
             console.error("❌ 검색 실패:", err);

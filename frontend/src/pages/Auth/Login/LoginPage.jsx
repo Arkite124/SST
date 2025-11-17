@@ -4,11 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { login } from "@/utils/auth.js";
 import {useDispatch} from "react-redux";
 import {fetchMeThunk} from "@/redux/slices/authSlice.js";
-import bgImg from "@/assets/bgImg.png"; // /auth/login 호출 (이미 구현됨):contentReference[oaicite:5]{index=5}
+import bgImg from "@/assets/bgImg.png";
+import {useModal} from "@/contexts/ModalContext.jsx"; // /auth/login 호출 (이미 구현됨):contentReference[oaicite:5]{index=5}
 
 export default function LoginPage() {
     const [form, setForm] = useState({ email: "", password: "" });
     const [loading, setLoading] = useState(false);
+    const { alert } = useModal();
     const navigate = useNavigate();
     const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
     const dispatch=useDispatch();
@@ -20,18 +22,11 @@ export default function LoginPage() {
             await login(form);
             await dispatch(fetchMeThunk());  // 로그인 성공시 로그인 상태 반영
             navigate("/");                   // 로그인 성공 → 메인으로
-        } catch (err) {
-            console.error(err);
-            alert("로그인에 실패했습니다.");
+        } catch {
+            await alert("입력 오류", "비밀번호가 일치하지 않습니다.");
         } finally {
             setLoading(false);
         }
-    };
-
-    // ✅ 소셜 로그인: 백엔드 OAuth 엔드포인트로 바로 리다이렉트
-    const socialLogin = (provider) => {
-        const base = import.meta.env.VITE_API_URL;     // axiosInstance와 동일 베이스:contentReference[oaicite:6]{index=6}
-        window.location.href = `${base}/auth/${provider}/login`;
     };
 
     return (

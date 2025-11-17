@@ -1,12 +1,22 @@
 // src/store/slice/puzzleSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { puzzleAPI } from '@/services/puzzleApi.js';
+import { puzzleAPI } from '@/utils/puzzleApi.js';
+import { formatScore, formatSimilarity } from '@/utils/format.js';
+
+/* ----------------------------------------
+   🔥 공통 Axios data 추출기
+----------------------------------------- */
+const extract = (payload) => payload?.data ?? payload;
+
+/* ----------------------------------------
+   🔥 퍼즐 생성
+----------------------------------------- */
 export const generatePuzzle = createAsyncThunk(
     'puzzle/generate',
-    async ({ age,user_id }, { rejectWithValue }) => {
+    async ({ age, user_id }, { rejectWithValue }) => {
         try {
-            const data = await puzzleAPI.generatePuzzle(age,user_id);
-            return data;
+            const res = await puzzleAPI.generatePuzzle(age, user_id);
+            return extract(res);
         } catch (error) {
             console.error('❌ 퍼즐 생성 에러:', error);
             return rejectWithValue(error.message);
@@ -14,17 +24,17 @@ export const generatePuzzle = createAsyncThunk(
     }
 );
 
+/* ----------------------------------------
+   🔥 정답 제출
+----------------------------------------- */
 export const submitAnswer = createAsyncThunk(
     'puzzle/submit',
-    async ({ puzzleId, answerBlocks }, { rejectWithValue }) => {
+    async ({ puzzle_id, answerBlocks }, { rejectWithValue }) => {
         try {
-            const userAnswer = answerBlocks.map(block => block.word).join(' ');
-            console.log('📤 제출:', { puzzleId, userAnswer });
+            const userAnswer = answerBlocks.map(b => b.word).join(' ');
 
-            const data = await puzzleAPI.submitAnswer(puzzleId, userAnswer);
-            console.log('📥 응답:', data);
-
-            return data;
+            const res = await puzzleAPI.submitAnswer(puzzle_id, userAnswer);
+            return extract(res);
         } catch (error) {
             console.error('❌ 답안 제출 에러:', error);
             return rejectWithValue(error.message);
@@ -32,13 +42,16 @@ export const submitAnswer = createAsyncThunk(
     }
 );
 
+/* ----------------------------------------
+   🔥 힌트 요청
+----------------------------------------- */
 export const getHint = createAsyncThunk(
     'puzzle/hint',
-    async ({ puzzleId, answerBlocks }, { rejectWithValue }) => {
+    async ({ puzzle_id, answerBlocks }, { rejectWithValue }) => {
         try {
-            const currentAnswer = answerBlocks.map(block => block.word).join(' ');
-            const data = await puzzleAPI.getHint(puzzleId, currentAnswer);
-            return data;
+            const currentAnswer = answerBlocks.map(b => b.word).join(' ');
+            const res = await puzzleAPI.getHint(puzzle_id, currentAnswer);
+            return extract(res);
         } catch (error) {
             console.error('❌ 힌트 요청 에러:', error);
             return rejectWithValue(error.message);
@@ -46,6 +59,9 @@ export const getHint = createAsyncThunk(
     }
 );
 
+/* ----------------------------------------
+   🔥 초기 상태
+----------------------------------------- */
 const initialState = {
     age: 4,
     puzzle: null,
@@ -65,22 +81,26 @@ const initialState = {
     error: null,
 };
 
-function shuffleArray(array) {
+/* ----------------------------------------
+   🔥 섞기 함수
+----------------------------------------- */
+const shuffleArray = (array) => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
     return newArray;
-}
+};
 
+/* ----------------------------------------
+   🔥 Slice
+----------------------------------------- */
 const puzzleSlice = createSlice({
     name: 'puzzle',
     initialState,
     reducers: {
-        setAge: (state, action) => {
-            state.age = action.payload;
-        },
+        setAge: (state, action) => { state.age = action.payload; },
 
         addBlockToAnswer: (state, action) => {
             const block = action.payload;
@@ -99,10 +119,9 @@ const puzzleSlice = createSlice({
         },
 
         resetAnswer: (state) => {
-            state.sourceBlocks = [
-                ...state.sourceBlocks,
-                ...state.answerBlocks
-            ].sort((a, b) => a.originalIndex - b.originalIndex);
+            state.sourceBlocks = [...state.sourceBlocks, ...state.answerBlocks].sort(
+                (a, b) => a.originalIndex - b.originalIndex
+            );
             state.answerBlocks = [];
             state.result = null;
             state.hints = null;
@@ -113,8 +132,8 @@ const puzzleSlice = createSlice({
 
             state.levelHistory.push({
                 age: state.age,
-                passed: passed,
-                question: state.currentQuestion + 1
+                passed,
+                question: state.currentQuestion + 1,
             });
 
             state.currentQuestion += 1;
@@ -123,11 +142,8 @@ const puzzleSlice = createSlice({
             if (state.currentQuestion >= state.totalQuestions) {
                 state.gameFinished = true;
             } else {
-                if (passed) {
-                    state.age = Math.min(13, state.age + 1);
-                } else {
-                    state.age = Math.max(4, state.age - 1);
-                }
+                if (passed) state.age = Math.min(13, state.age + 1);
+                else state.age = Math.max(4, state.age - 1);
             }
 
             state.puzzle = null;
@@ -138,18 +154,7 @@ const puzzleSlice = createSlice({
         },
 
         restartGame: (state) => {
-            state.age = 4;
-            state.currentQuestion = 0;
-            state.correctCount = 0;
-            state.score = 0;
-            state.attempts = 0;
-            state.gameFinished = false;
-            state.levelHistory = [];
-            state.puzzle = null;
-            state.sourceBlocks = [];
-            state.answerBlocks = [];
-            state.result = null;
-            state.hints = null;
+            Object.assign(state, initialState);
         },
 
         resetPuzzle: (state) => {
@@ -164,9 +169,13 @@ const puzzleSlice = createSlice({
             state.error = null;
         },
     },
+
+    /* ----------------------------------------
+       🔥 Extra Reducers
+    ----------------------------------------- */
     extraReducers: (builder) => {
         builder
-            // 퍼즐 생성
+            /* 🔥 퍼즐 생성 */
             .addCase(generatePuzzle.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -175,11 +184,14 @@ const puzzleSlice = createSlice({
             })
             .addCase(generatePuzzle.fulfilled, (state, action) => {
                 state.loading = false;
-                state.puzzle = action.payload;
 
-                const pieces = action.payload.pieces || [];
+                const puzzle = action.payload;
+                state.puzzle = puzzle;
+
+                const pieces = puzzle?.pieces || [];
+
                 state.sourceBlocks = pieces.map((piece, index) => ({
-                    id: `${action.payload.puzzle_id}-${index}`,
+                    id: `${puzzle.puzzle_id}-${index}`,
                     word: piece.word || piece,
                     originalIndex: index,
                 }));
@@ -189,11 +201,10 @@ const puzzleSlice = createSlice({
             })
             .addCase(generatePuzzle.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload || '퍼즐 생성에 실패했습니다.';
-                console.error('퍼즐 생성 실패:', action.payload);
+                state.error = action.payload || '퍼즐 생성 실패';
             })
 
-            // 답안 제출
+            /* 🔥 정답 제출 */
             .addCase(submitAnswer.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -201,56 +212,43 @@ const puzzleSlice = createSlice({
             .addCase(submitAnswer.fulfilled, (state, action) => {
                 state.loading = false;
 
-                // ✅ 백엔드 응답 데이터를 그대로 사용
-                const response = action.payload || {};
-                console.log('✅ 제출 성공 (백엔드 응답):', response);
+                const data = action.payload;
 
-                // ✅ 백엔드 응답을 그대로 저장
                 state.result = {
-                    passed: response.passed || false,
-                    message: response.message || response.feedback || '결과 없음',
-                    similarity: response.similarity || 0,
-                    exact_match: response.exact_match || false,
-                    original_sentence: response.original_sentence || null,
-                    user_sentence: response.user_sentence || '',
-                    score: response.score || 0,  // ✅ 백엔드 계산 점수
-                    feedback: response.feedback || ''
+                    passed: data.passed || false,
+                    message: data.message || data.feedback || '결과 없음',
+                    similarity: formatSimilarity(data.similarity),
+                    exact_match: data.exact_match || false,
+                    original_sentence: data.original_sentence ?? null,
+                    user_sentence: data.user_sentence ?? '',
+                    score: formatScore(data.score),
+                    feedback: data.feedback ?? '',
                 };
 
                 state.attempts += 1;
 
-                // ✅ 정답일 때만 백엔드에서 계산한 점수를 누적
-                if (response.passed) {
+                if (data.passed) {
                     state.correctCount += 1;
-                    // ✅ 백엔드 score를 그대로 사용 (프론트엔드에서 재계산 안 함)
-                    const earnedScore = response.score || 0;
-                    state.score += earnedScore;
-
-                    console.log(`✅ 점수 획득: ${earnedScore}점 (누적: ${state.score}점)`);
+                    state.score += data.score || 0;
                 }
             })
             .addCase(submitAnswer.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload || '답안 제출에 실패했습니다.';
-                console.error('답안 제출 실패:', action.payload);
-                alert(`에러 발생: ${state.error}`);
+                state.error = action.payload || '답안 제출 실패';
             })
 
-            // 힌트 요청
+            /* 🔥 힌트 */
             .addCase(getHint.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
             .addCase(getHint.fulfilled, (state, action) => {
                 state.loading = false;
-                // ✅ 백엔드 힌트 응답을 그대로 저장
                 state.hints = action.payload;
-                console.log('✅ 힌트 수신:', action.payload);
             })
             .addCase(getHint.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload || '힌트 요청에 실패했습니다.';
-                console.error('힌트 요청 실패:', action.payload);
+                state.error = action.payload || '힌트 요청 실패';
             });
     },
 });

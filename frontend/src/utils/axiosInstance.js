@@ -2,7 +2,8 @@ import axios from "axios";
 
 // ✅ 공통 axios 인스턴스
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
+    baseURL: "http://localhost:8000", // FastAPI 로컬 서버 주소
+    // baseURL: "https://sprout-kids.org", // 배포 서버 주소
     withCredentials: true, // 쿠키 포함 필수!
 });
 
@@ -24,7 +25,6 @@ instance.interceptors.response.use(
                     try {
                         await instance.post("/auth/refresh", {});
                         isRefreshing = false;
-    
                         originalRequest._retry = true; // ✅ 재시도는 1번만
                         return instance(originalRequest);
                     } catch (refreshError) {

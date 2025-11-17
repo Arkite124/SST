@@ -1,18 +1,13 @@
-import psycopg, os
+import os
 from dotenv import load_dotenv
-from models import VocaLabels
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 
 # PostgreSQL 연결 설정
 
 load_dotenv()
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_PORT = 5433
-DB_NAME = os.getenv("DB_NAME")
 
-DATABASE_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@localhost:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # SQLAlchemy 엔진 생성
 engine = create_engine(DATABASE_URL, echo=True)

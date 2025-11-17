@@ -1,101 +1,94 @@
-import { useEffect, useState } from "react";
+// src/pages/Activity/DailyWriting/DailyWritingEditModal.jsx
+import { useState } from "react";
 import Button from "@/components/common/Button";
+import { useModal } from "@/contexts/ModalContext";
 
-export default function DailyWritingEditModal({ writing, onSubmit, onClose }) {
-    const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
-    const [mood, setMood] = useState(5);
-    const [attachment_url, setAttachment_url] = useState("");
+export default function DailyWritingEditModal({ writing, onSubmit }) {
+    const [content, setContent] = useState(writing.content || "");
+    const [mood, setMood] = useState(writing.mood || 5);
+    const [title, setTitle] = useState(writing.title || "");
+    const [attachment_url, setAttachment_url] = useState(writing.attachment_url || "");
+    const { alert, closeModal } = useModal();
 
-    useEffect(() => {
-        if (writing) {
-            setTitle(writing.title || "");
-            setContent(writing.content || "");
-            setMood(writing.mood || 5);
-            setAttachment_url(writing.attachment_url || "");
-        }
-    }, [writing]);
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!content.trim()) return alert("내용을 입력해주세요!");
-        const created_at = writing.created_at || new Date().toISOString().split("T")[0];
-        onSubmit({ title, content, mood, attachment_url, created_at });
+        if (!content.trim()) {
+            await alert("입력 오류", "내용은 반드시 입력해야 합니다.");
+            return;
+        }
+
+        onSubmit({
+            title,
+            content,
+            mood,
+            attachment_url,
+        });
+        closeModal(); // 수정 후 닫기
     };
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-[#4E944F] text-center">
-                ✏️ 일기 수정하기
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* 제목 */}
-                <div>
-                    <label>
-                        오늘의 일기 제목
-                        <input
-                            type="text"
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="제목을 입력해주세요"
-                            required
-                        />
-                    </label>
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 제목 */}
+            <div>
+                <label>
+                    제목 수정
+                    <input
+                        type="text"
+                        className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        required
+                    />
+                </label>
+            </div>
 
-                {/* 내용 */}
-                <div>
-                    <label>
-                        오늘 하루는 어땠나요?
-                        <textarea
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-40 focus:ring-2 focus:ring-[#4E944F]"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            placeholder="오늘 하루를 다시 적어볼까요?"
-                            required
-                        />
-                    </label>
-                </div>
+            {/* 내용 */}
+            <div>
+                <label>
+                    내용 수정
+                    <textarea
+                        className="w-full border border-[#B4E197] rounded-xl p-2 h-40 focus:ring-2 focus:ring-[#4E944F]"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        required
+                    />
+                </label>
+            </div>
 
-                {/* 감정 선택 */}
-                <div className="flex justify-between items-center">
-                    <label className="text-gray-600 select-none">
-                        오늘의 감정
-                        <select
-                            value={mood}
-                            onChange={(e) => setMood(Number(e.target.value))}
-                            className="border border-[#B4E197] rounded-lg p-1 focus:ring-2 focus:ring-[#4E944F]"
-                            required
-                        >
-                            <option value={5}>😊</option>
-                            <option value={4}>😄</option>
-                            <option value={3}>😐</option>
-                            <option value={2}>😢</option>
-                            <option value={1}>😡</option>
-                        </select>
-                    </label>
-                </div>
+            {/* 감정 */}
+            <div>
+                <label>
+                    감정 수정
+                    <select
+                        value={mood}
+                        onChange={(e) => setMood(Number(e.target.value))}
+                        className="border border-[#B4E197] rounded-lg p-1 focus:ring-2 focus:ring-[#4E944F]"
+                    >
+                        <option value={5}>😊</option>
+                        <option value={4}>😄</option>
+                        <option value={3}>😐</option>
+                        <option value={2}>😢</option>
+                        <option value={1}>😡</option>
+                    </select>
+                </label>
+            </div>
 
-                {/* 첨부 URL */}
-                <div>
-                    <label>
-                        참고 링크
-                        <input
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"
-                            value={attachment_url}
-                            onChange={(e) => setAttachment_url(e.target.value)}
-                            placeholder="같이 본 인터넷 주소가 있으면 넣어주세요!"
-                        />
-                    </label>
-                </div>
+            {/* 링크 */}
+            <div>
+                <label>
+                    참고 링크
+                    <input
+                        className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem]"
+                        value={attachment_url}
+                        onChange={(e) => setAttachment_url(e.target.value)}
+                    />
+                </label>
+            </div>
 
-                {/* 버튼 */}
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={onClose} label={"취소"}/>
-                    <Button type="submit" label={"저장"}/>
-                </div>
-            </form>
-        </div>
+            <div className="flex justify-end gap-3">
+                <Button variant="secondary" onClick={closeModal} label="취소" />
+                <Button type="submit" label="수정" />
+            </div>
+        </form>
     );
 }

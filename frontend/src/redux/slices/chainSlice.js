@@ -1,55 +1,83 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { chainAPI } from '@/services/chainApi.js'
-import { createBaseGameState, createBaseGameReducers, setLoadingState, setSuccessMessage, setErrorMessage } from './baseGameSlice';
+import { chainAPI } from '@/utils/chainApi.js';
+import {
+    createBaseGameState,
+    createBaseGameReducers,
+    setLoadingState,
+    setSuccessMessage,
+    setErrorMessage,
+} from './baseGameSlice';
 
 const TURN_TIME = 10;
 
-// Async Thunks
-export const startGame = createAsyncThunk('chain/startGame', async (difficulty, { rejectWithValue }) => {
-    try {
-        return await chainAPI.startGame(difficulty);
-    } catch (error) {
-        return rejectWithValue(error.message);
-    }
-});
+/* -----------------------------
+    🔥 공통 Axios 데이터 추출기
+------------------------------ */
+const extract = (payload) => payload?.data ?? payload;
 
-export const submitWord = createAsyncThunk('chain/submitWord', async ({ gameId, word, timeUp = false }, { rejectWithValue }) => {
-    try {
-        return await chainAPI.submitWord(gameId, word, timeUp);
-    } catch (error) {
-        return rejectWithValue(error.message);
-    }
-});
-
-// ✅ 게임 종료 thunk 추가
-export const endGame = createAsyncThunk('chain/endGame', async (gameId, { rejectWithValue }) => {
-    try {
-        if (gameId) {
-            await chainAPI.endGame(gameId);
-            console.log(`🗑️ 게임 ${gameId} 삭제 완료`);
+/* -----------------------------
+    🔥 게임 시작
+------------------------------ */
+export const startGame = createAsyncThunk(
+    'chain/startGame',
+    async (difficulty, { rejectWithValue }) => {
+        try {
+            const res = await chainAPI.startGame(difficulty);
+            return extract(res);
+        } catch (error) {
+            return rejectWithValue(error.message);
         }
-        return gameId;
-    } catch (error) {
-        console.error('게임 삭제 실패:', error);
-        return rejectWithValue(error.message);
     }
-});
+);
 
-// ✅ 재시작 시 기존 게임 삭제 후 새 게임 시작
-export const restartGame = createAsyncThunk('chain/restartGame', async (_, { getState, dispatch }) => {
-    const { difficulty, gameId } = getState().chain;
-
-    // ✅ 기존 게임이 있으면 삭제
-    if (gameId) {
-        await dispatch(endGame(gameId));
+/* -----------------------------
+    🔥 단어 제출
+------------------------------ */
+export const submitWord = createAsyncThunk(
+    'chain/submitWord',
+    async ({ gameId, word, timeUp = false }, { rejectWithValue }) => {
+        try {
+            const res = await chainAPI.submitWord(gameId, word, timeUp);
+            return extract(res);
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
     }
+);
 
-    // ✅ 새 게임 시작
-    const result = await chainAPI.startGame(difficulty);
-    return result;
-});
+/* -----------------------------
+    🔥 게임 삭제
+------------------------------ */
+export const endGame = createAsyncThunk(
+    'chain/endGame',
+    async (gameId, { rejectWithValue }) => {
+        try {
+            if (gameId) await chainAPI.endGame(gameId);
+            return gameId;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
-// 초기 상태
+/* -----------------------------
+    🔥 게임 재시작
+------------------------------ */
+export const restartGame = createAsyncThunk(
+    'chain/restartGame',
+    async (_, { getState, dispatch }) => {
+        const { difficulty, gameId } = getState().chain;
+
+        if (gameId) await dispatch(endGame(gameId));
+
+        const res = await chainAPI.startGame(difficulty);
+        return extract(res);
+    }
+);
+
+/* -----------------------------
+    🔥 초기 상태
+------------------------------ */
 const chainInitialState = createBaseGameState({
     difficulty: 'medium',
     winner: null,
@@ -63,155 +91,183 @@ const chainInitialState = createBaseGameState({
     defeatReason: '',
 });
 
+/* -----------------------------
+    🔥 Slice 본체
+------------------------------ */
 const chainSlice = createSlice({
     name: 'chain',
     initialState: chainInitialState,
     reducers: {
         ...createBaseGameReducers(),
-        // 🔥 타이머 시작
+
         startTurn: (state) => {
             state.turnTimeLeft = TURN_TIME;
             state.turnTimerActive = true;
         },
-        // 🔥 1초 감소
         tickTurn: (state) => {
-            if (state.gameOver || !state.turnTimerActive || state.loading) {
-                return;
-            }
-            if (state.turnTimeLeft > 0) {
-                state.turnTimeLeft -= 1;
-            }
+            if (state.gameOver || !state.turnTimerActive || state.loading) return;
+
+            state.turnTimeLeft -= 1;
+
             if (state.turnTimeLeft <= 0) {
                 state.turnTimerActive = false;
                 state.gameOver = true;
                 state.winner = 'computer';
                 state.defeatReason = '⏰ 시간 초과! 10초 안에 단어를 입력하지 못했습니다.';
                 state.gameStarted = false;
+                state.turnTimeLeft = 0;
             }
         },
-        // 🔥 타이머 정지
         stopTurn: (state) => {
             state.turnTimerActive = false;
         },
-        // 🔥 타이머 리셋
         resetTurn: (state) => {
             state.turnTimeLeft = TURN_TIME;
             state.turnTimerActive = true;
         },
-        resetGame: (state) => {
-            return { ...chainInitialState };
-        },
+        resetGame: () => ({ ...chainInitialState }),
         clearMessage: (state) => {
             state.message = '';
             state.messageType = '';
         },
     },
+
+    /* -----------------------------
+        🔥 Extra Reducers
+    ------------------------------ */
     extraReducers: (builder) => {
         builder
+            /* -----------------------------
+                🚀 게임 시작 성공
+            ------------------------------ */
             .addCase(startGame.fulfilled, (state, action) => {
-                state.gameId = action.payload.game_id;
-                state.difficulty = action.payload.difficulty;
+                const data = action.payload;
+
+                state.gameId = data.game_id;
+                state.difficulty = data.difficulty;
                 state.gameStarted = true;
                 state.gameOver = false;
                 state.winner = null;
                 state.defeatReason = '';
                 state.lastUserWord = '';
-                setSuccessMessage(state, action.payload.message);
 
-                if (action.payload.first_word) {
-                    state.history = [{
-                        word: action.payload.first_word,
-                        definition: action.payload.first_definition || '시작 단어',
-                        type: 'computer'
-                    }];
-                    state.currentWord = action.payload.first_word;
+                setSuccessMessage(state, data.message);
+
+                if (data.first_word) {
+                    state.history = [
+                        {
+                            word: data.first_word,
+                            definition: data.first_definition || '시작 단어',
+                            type: 'computer',
+                        },
+                    ];
+                    state.currentWord = data.first_word;
                 } else {
                     state.history = [];
                 }
 
-                // 🔥 게임 시작 시 타이머 활성화
                 state.turnTimeLeft = TURN_TIME;
                 state.turnTimerActive = true;
             })
+
+            /* -----------------------------
+                🔥 단어 제출 중
+            ------------------------------ */
             .addCase(submitWord.pending, (state) => {
                 setLoadingState(state, true);
-                // 🔥 로딩 중에는 타이머 정지
                 state.turnTimerActive = false;
             })
+
+            /* -----------------------------
+                🔥 단어 제출 성공
+            ------------------------------ */
             .addCase(submitWord.fulfilled, (state, action) => {
+                const data = action.payload;
                 setLoadingState(state, false);
 
-                // 🔥 실패 처리 (사전에 없는 단어, 규칙 위반 등)
-                if (!action.payload.success) {
-                    state.turnTimerActive = false; // 타이머 정지
-                    setErrorMessage(state, action.payload.message);
-                    state.defeatReason = action.payload.reason || action.payload.message;
+                // ❌ 사용자 패배 처리
+                if (!data.success) {
+                    state.turnTimerActive = false;
+                    setErrorMessage(state, data.message);
+                    state.defeatReason = data.reason || data.message;
 
-                    // 🔥 패배 시 마지막 사용자 단어 저장 (여러 필드에서 추출)
-                    const userWord = action.payload.user_word
-                                    || action.payload.last_user_word
-                                    || action.payload.user_wrong_word
-                                    || '';
+                    state.lastUserWord =
+                        data.user_word ||
+                        data.last_user_word ||
+                        data.user_wrong_word ||
+                        '';
 
-                    state.lastUserWord = userWord;
-
-                    if (action.payload.game_over) {
+                    if (data.game_over) {
                         state.gameOver = true;
-                        state.winner = action.payload.winner || 'computer';
+                        state.winner = data.winner || 'computer';
                         state.gameStarted = false;
                         state.turnTimeLeft = 0;
                     }
                     return;
                 }
 
-                // 🔥 단어 성공 제출
-                if (action.payload.user_word) {
+                // ⭕ 사용자 단어 성공
+                if (data.user_word) {
                     state.history.push({
-                        word: action.payload.user_word,
-                        definition: action.payload.user_definition,
+                        word: data.user_word,
+                        definition: data.user_definition,
                         type: 'user',
                     });
-                    state.lastUserWord = action.payload.user_word;
+                    state.lastUserWord = data.user_word;
                 }
 
-                // 🔥 컴퓨터 단어 추가
-                if (action.payload.computer_word) {
+                // ⭕ 컴퓨터 단어 성공
+                if (data.computer_word) {
                     state.history.push({
-                        word: action.payload.computer_word,
-                        definition: action.payload.computer_definition,
+                        word: data.computer_word,
+                        definition: data.computer_definition,
                         type: 'computer',
                     });
-                    state.currentWord = action.payload.computer_word;
-                    state.lastComputerWord = action.payload.computer_word;
+                    state.currentWord = data.computer_word;
+                    state.lastComputerWord = data.computer_word;
                 }
-                // 🔥 게임이 계속되면 타이머 리셋
-                if (action.payload.game_over) {
+
+                // 🔥 게임 종료
+                if (data.game_over) {
                     state.gameOver = true;
-                    state.winner = action.payload.winner || 'user';
+                    state.winner = data.winner || 'user';
                     state.gameStarted = false;
                     state.turnTimerActive = false;
                     state.turnTimeLeft = 0;
                 } else {
+                    // 🔥 다음 턴 진행
                     state.turnTimeLeft = TURN_TIME;
                     state.turnTimerActive = true;
                 }
             })
+
+            /* -----------------------------
+                ❌ 단어 제출 실패
+            ------------------------------ */
             .addCase(submitWord.rejected, (state, action) => {
                 setLoadingState(state, false);
                 state.turnTimerActive = false;
-                setErrorMessage(state, action.payload || '알 수 없는 오류가 발생했습니다.');
+                setErrorMessage(
+                    state,
+                    action.payload || '알 수 없는 오류가 발생했습니다.'
+                );
             })
-            // ✅ endGame 처리
-            .addCase(endGame.fulfilled, (state, action) => {
-                console.log(`✅ 게임 ${action.payload} 삭제됨`);
+
+            /* -----------------------------
+                🗑 게임 삭제
+            ------------------------------ */
+            .addCase(endGame.fulfilled, (_, action) => {
+                console.log(`🗑 게임 ${action.payload} 삭제됨`);
             })
-            .addCase(endGame.rejected, (state, action) => {
-                console.error('게임 삭제 실패:', action.payload);
-            })
+
+            /* -----------------------------
+                🚀 게임 재시작
+            ------------------------------ */
             .addCase(restartGame.fulfilled, (state, action) => {
-                // 게임 재시작 시 초기화
-                state.gameId = action.payload.game_id;
-                state.difficulty = action.payload.difficulty;
+                const data = action.payload;
+
+                state.gameId = data.game_id;
+                state.difficulty = data.difficulty;
                 state.gameStarted = true;
                 state.gameOver = false;
                 state.winner = null;
@@ -219,23 +275,26 @@ const chainSlice = createSlice({
                 state.lastUserWord = '';
                 state.history = [];
 
-                if (action.payload.first_word) {
-                    state.history = [{
-                        word: action.payload.first_word,
-                        definition: action.payload.first_definition || '시작 단어',
-                        type: 'computer'
-                    }];
-                    state.currentWord = action.payload.first_word;
+                if (data.first_word) {
+                    state.history = [
+                        {
+                            word: data.first_word,
+                            definition: data.first_definition || '시작 단어',
+                            type: 'computer',
+                        },
+                    ];
+                    state.currentWord = data.first_word;
                 }
 
-                // 타이머 리셋
                 state.turnTimeLeft = TURN_TIME;
                 state.turnTimerActive = true;
 
-                setSuccessMessage(state, action.payload.message);
-        });
+                setSuccessMessage(state, data.message);
+            });
     },
 });
 
-export const { startTurn, tickTurn, stopTurn, resetTurn, resetGame, clearMessage } = chainSlice.actions;
+export const { startTurn, tickTurn, stopTurn, resetTurn, resetGame, clearMessage } =
+    chainSlice.actions;
+
 export default chainSlice.reducer;

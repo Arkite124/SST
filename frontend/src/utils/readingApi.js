@@ -3,6 +3,7 @@ import axiosInstance from "@/utils/axiosInstance.js";
 
 
 const API_URL = "http://localhost:8000/test/reading";
+// const API_URL = "https://sprout-kids.org/test/reading";
 
 export const readingApi = {
     // 현재 로그인한 사용자 정보 조회

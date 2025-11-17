@@ -1,8 +1,10 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
 import PuzzleGame from '@/components/puzzle/PuzzleGame';
 import GameButton from '@/components/common/GameButton';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
+import {useSelector} from "react-redux";
+import {toast} from "react-toastify";
 
 const SentencePuzzlePage = () => {
     const navigate = useNavigate();

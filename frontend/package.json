@@ -9,10 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@reduxjs/toolkit": "^2.9.2",
     "@tosspayments/payment-sdk": "^1.9.1",
     "axios": "^1.13.0",
     "dayjs": "^1.11.19",
+    "headlessui": "^0.0.0",
     "react": "^19.1.1",
     "react-calendar": "^6.0.0",
     "react-dom": "^19.1.1",
@@ -22,7 +24,8 @@
     "react-router-dom": "^7.9.3",
     "react-toastify": "^11.0.5",
     "recharts": "^3.2.1",
-    "redux-persist": "^6.0.0"
+    "redux-persist": "^6.0.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

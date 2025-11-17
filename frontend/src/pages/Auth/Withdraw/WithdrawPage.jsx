@@ -1,12 +1,14 @@
 // Auth/Withdraw/WithdrawPage.jsx
 import axios from "@/utils/axiosInstance.js";
 import { useNavigate } from "react-router-dom";
+import {useModal} from "@/contexts/ModalContext.jsx";
 
 export default function WithdrawPage() {
     const navigate = useNavigate();
-
+    const {confirm}=useModal();
     const onWithdraw = async () => {
-        if (!confirm("정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+        const ok = await confirm("탈퇴 확인", "정말 탈퇴하시겠습니까?");
+        if (!ok) return;
         try {
             await axios.delete("/users/me", { data: {}, withCredentials: true }); // 빈 data 포함 주의사항 반영
             alert("탈퇴가 완료되었습니다.");

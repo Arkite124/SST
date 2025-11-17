@@ -39,9 +39,9 @@ const PuzzleGame = () => {
             alert('단어를 배치해주세요.');
             return;
         }
-        dispatch(submitAnswer({ puzzleId: puzzle.puzzle_id, answerBlocks }));
+        dispatch(submitAnswer({ puzzle_id: puzzle.puzzle_id, answerBlocks }));
     };
-    const handleGetHint = () => dispatch(getHint({ puzzleId: puzzle.puzzle_id, answerBlocks }));
+    const handleGetHint = () => dispatch(getHint({ puzzle_id: puzzle.puzzle_id, answerBlocks }));
     const handleReset = () => dispatch(resetAnswer());
     const handleNextQuestion = () => {
         const passed = result?.passed || false;
