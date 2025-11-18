@@ -28,7 +28,6 @@ class UserNickname(BaseModel):
     class Config:
         from_attributes = True
 
-
 # ✅ 글 생성 요청용
 class ReadingForumPostCreate(BaseModel):
     user_id: int
@@ -64,6 +63,7 @@ class ReadingForumPostRead(BaseModel):
 
 # ForwardRef 갱신
 ReadingForumPostRead.model_rebuild()
+
 class ReadingForumPostListResponse(BaseModel):
     total: int
     page: int
@@ -209,6 +209,7 @@ def delete_post(
     db.delete(post)
     db.commit()
     return {"성공여부": True}
+
 # ✅ 댓글 생성
 @router.post("/comments", response_model=ReadingForumPostRead)
 def create_comment(

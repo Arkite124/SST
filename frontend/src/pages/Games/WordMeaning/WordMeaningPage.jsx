@@ -7,6 +7,7 @@ import GameResult from '@/components/spell/GameResult';
 import MessageDisplay from '@/components/common/Message';
 import GameButton from '@/components/common/GameButton';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 const WordMeaningPage = () => {
     const navigate = useNavigate();
     const { state, actions } = useSpellGame();
@@ -17,8 +18,9 @@ const WordMeaningPage = () => {
         setAnswer('');
     };
     useAuthLoad()
+    useCheckUser();
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-8">
+        <div className="min-h-[70%] bg-gradient-to-br from-purple-50 to-pink-50 py-8">
             <div className="container mx-auto px-4 max-w-2xl">
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                     {/* 헤더 */}

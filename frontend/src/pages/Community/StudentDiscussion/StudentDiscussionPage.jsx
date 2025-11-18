@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import axios from "@/utils/axiosInstance.js";
+import axiosInstance from "@/utils/axiosInstance.js";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import axiosInstance from "@/utils/axiosInstance.js";
-import {toast} from "react-toastify";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function StudentDiscussionPage() {
     const [posts, setPosts] = useState([]);
@@ -16,47 +16,44 @@ export default function StudentDiscussionPage() {
     const [error, setError] = useState("");
     const [showForm, setShowForm] = useState(false);
 
-    // ✅ 페이지네이션 상태
     const [page, setPage] = useState(1);
     const [size] = useState(8);
     const [total, setTotal] = useState(0);
 
     const navigate = useNavigate();
-    const {user,loading} = useSelector((state) => state.auth);
-    useEffect(() => {
-        if (user == null) {
-            toast.error("이용하려면 로그인 해주세요.", { autoClose: 2000 });
-            navigate("/login")// 로그인 사이트으로 이동
-        }
-    }, [user, navigate]);
-    // ✅ 게시글 목록 가져오기
+    const { user } = useSelector((state) => state.auth);
+    const { alert, confirm } = useModal();
+    useCheckUser();
+
+    // 게시글 목록 가져오기
     const fetchPosts = async () => {
         setLoadingList(true);
         setError("");
+
         try {
-            const res = await axios.get(`/community/student/posts?page=${page}&size=${size}`);
+            const res = await axiosInstance.get(`/community/student/posts?page=${page}&size=${size}`);
             setPosts(res.data.items || []);
             setTotal(res.data.total || 0);
         } catch (err) {
             if (err.response?.status === 401) {
-                alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+                await alert("로그인이 필요합니다", "세션이 만료되었습니다. 다시 로그인해주세요.");
                 navigate("/login");
             } else {
-                setError("목록을 불러오지 못했습니다.");
+                await alert("오류", "목록을 불러오지 못했습니다.");
             }
         } finally {
             setLoadingList(false);
         }
     };
 
-    // ✅ 게시글 등록
+    // 게시글 등록
     const addPost = async (e) => {
         e.preventDefault();
         setSubmitting(true);
         setError("");
 
         try {
-            const res = await axiosInstance.post("/community/student/posts", {
+            await axiosInstance.post("/community/student/posts", {
                 user_id: user.id,
                 discussion_tags: discussionTags,
                 title,
@@ -64,43 +61,46 @@ export default function StudentDiscussionPage() {
                 content,
             });
 
-            // 새 게시글 등록 후 첫 페이지로 돌아가기
+            await alert("등록 완료", "게시글이 성공적으로 등록되었습니다.");
+
             setPage(1);
             fetchPosts();
 
-            // 입력값 초기화
             setDiscussionTags("");
             setTitle("");
             setBookTitle("");
             setContent("");
         } catch (err) {
             console.error("❌ 등록 실패:", err);
-            setError("게시글 등록 중 오류가 발생했습니다.");
+            await alert("등록 실패", "게시글 등록 중 오류가 발생했습니다.");
         } finally {
             setSubmitting(false);
         }
     };
 
-    // ✅ 게시글 삭제
+    // 게시글 삭제
     const deletePost = async (id) => {
-        if (!window.confirm("정말 삭제하시겠습니까?")) return;
+        const ok = await confirm("삭제 확인", "정말 삭제하시겠습니까?");
+        if (!ok) return;
+
         const prev = posts;
         setPosts(posts.filter((p) => p.id !== id));
+
         try {
-            await axios.delete(`/community/student/${id}`);
+            await axiosInstance.delete(`/community/student/${id}`);
+            await alert("삭제 완료", "게시글이 삭제되었습니다.");
             fetchPosts();
         } catch (err) {
             setPosts(prev);
             if (err.response?.status === 401) {
-                alert("세션이 만료되었습니다.");
+                await alert("로그인이 필요합니다", "세션이 만료되었습니다.");
                 navigate("/login");
             } else {
-                setError("게시글 삭제 중 오류가 발생했습니다.");
+                await alert("오류", "게시글 삭제 중 오류가 발생했습니다.");
             }
         }
     };
 
-    // ✅ 페이지 변경 시 목록 다시 로드
     useEffect(() => {
         fetchPosts();
     }, [page]);
@@ -109,9 +109,9 @@ export default function StudentDiscussionPage() {
 
     return (
         <div className="p-1">
-            {/* ✅ 제목 + 버튼 묶기 */}
+            {/* 제목 + 버튼 */}
             <div className="flex justify-between items-center mb-2">
-                <h1 className="text-2xl font-bold text-[#4E944F]">학생 토론 게시판</h1>
+                <h1 className="text-2xl font-bold text-[#4E944F]">독서 토론 게시판</h1>
                 {user && (
                     <button
                         onClick={() => setShowForm(!showForm)}
@@ -122,7 +122,7 @@ export default function StudentDiscussionPage() {
                 )}
             </div>
 
-            {/* ✅ 입력 폼 */}
+            {/* 입력 폼 */}
             {showForm && (
                 <form
                     onSubmit={addPost}
@@ -130,15 +130,12 @@ export default function StudentDiscussionPage() {
                 >
                     {/* 태그 */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="discussionTags" className="font-semibold text-[#4E944F]">
-                            토론 주제 태그
-                        </label>
+                        <label className="font-semibold text-[#4E944F]">토론 주제 태그</label>
                         <select
-                            id="discussionTags"
                             value={discussionTags}
                             onChange={(e) => setDiscussionTags(e.target.value)}
                             disabled={submitting}
-                            className="w-full border-2 border-[#B4E197] p-1 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white text-gray-700 font-semibold shadow-sm hover:border-[#83BD75] transition"
+                            className="w-full border-2 border-[#B4E197] p-1 rounded-xl focus:ring-2 focus:ring-[#83BD75] bg-white"
                         >
                             <option value="" disabled>태그를 선택하세요</option>
                             <option value="친구">친구</option>
@@ -151,41 +148,36 @@ export default function StudentDiscussionPage() {
 
                     {/* 제목 */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="title" className="font-semibold text-[#4E944F]">토론 제목</label>
+                        <label className="font-semibold text-[#4E944F]">토론 제목</label>
                         <input
-                            id="title"
-                            type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="토론 제목을 입력하세요"
-                            className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white"
+                            className="border-2 border-[#B4E197] p-2 rounded-xl"
                             disabled={submitting}
                         />
                     </div>
 
                     {/* 도서 제목 */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="bookTitle" className="font-semibold text-[#4E944F]">관련 도서 제목</label>
+                        <label className="font-semibold text-[#4E944F]">관련 도서 제목</label>
                         <input
-                            id="bookTitle"
-                            type="text"
                             value={bookTitle}
                             onChange={(e) => setBookTitle(e.target.value)}
                             placeholder="관련된 책 제목을 입력하세요"
-                            className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white"
+                            className="border-2 border-[#B4E197] p-2 rounded-xl"
                             disabled={submitting}
                         />
                     </div>
 
                     {/* 내용 */}
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="content" className="font-semibold text-[#4E944F]">토론 내용</label>
+                        <label className="font-semibold text-[#4E944F]">토론 내용</label>
                         <textarea
-                            id="content"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             placeholder="토론 내용을 입력하세요"
-                            className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white h-24 resize-none"
+                            className="border-2 border-[#B4E197] p-2 rounded-xl h-24 resize-none"
                             disabled={submitting}
                         />
                     </div>
@@ -203,7 +195,7 @@ export default function StudentDiscussionPage() {
                 </form>
             )}
 
-            {/* ✅ 게시글 목록 */}
+            {/* 게시글 목록 */}
             {loadingList ? (
                 <p className="text-gray-500 mb-2">불러오는 중...</p>
             ) : posts.length === 0 ? (
@@ -249,56 +241,47 @@ export default function StudentDiscussionPage() {
                         })}
                     </ul>
 
-                    {/* ✅ 페이지네이션 버튼 */}
+                    {/* 페이지네이션 */}
                     <div className="flex justify-center items-center gap-4 mt-4">
-                        {/* 🟢 처음으로 버튼 */}
+                        {/* 처음으로 */}
                         {page > 1 && (
                             <button
                                 onClick={() => setPage(1)}
-                                className="px-4 py-2 rounded-xl font-semibold bg-[#B4E197] text-white hover:bg-[#83BD75] transition"
+                                className="px-4 py-2 rounded-xl font-semibold bg-[#B4E197] text-white hover:bg-[#83BD75]"
                             >
                                 « 처음으로
                             </button>
                         )}
 
-                        {/* ◀ 이전 */}
+                        {/* 이전 */}
                         {page > 1 && (
                             <button
                                 onClick={() => setPage((prev) => prev - 1)}
-                                className={`px-4 py-2 rounded-xl font-semibold ${
-                                    page === 1
-                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        : "bg-[#83BD75] text-white hover:bg-[#4E944F]"
-                                }`}
+                                className="px-4 py-2 rounded-xl font-semibold bg-[#83BD75] text-white hover:bg-[#4E944F]"
                             >
                                 ◀ 이전
                             </button>
                         )}
 
-                        {/* 현재 페이지 표시 */}
                         <span className="font-semibold text-gray-700">
-        {page} / {totalPages || 1}
-    </span>
+                            {page} / {totalPages || 1}
+                        </span>
 
-                        {/* ▶ 다음 */}
+                        {/* 다음 */}
                         {page < totalPages && (
                             <button
                                 onClick={() => setPage((prev) => prev + 1)}
-                                className={`px-4 py-2 rounded-xl font-semibold ${
-                                    page >= totalPages
-                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        : "bg-[#83BD75] text-white hover:bg-[#4E944F]"
-                                }`}
+                                className="px-4 py-2 rounded-xl font-semibold bg-[#83BD75] text-white hover:bg-[#4E944F]"
                             >
                                 다음 ▶
                             </button>
                         )}
 
-                        {/* 🟢 마지막으로 버튼 */}
+                        {/* 마지막으로 */}
                         {page < totalPages && (
                             <button
                                 onClick={() => setPage(totalPages)}
-                                className="px-4 py-2 rounded-xl font-semibold bg-[#B4E197] text-white hover:bg-[#83BD75] transition"
+                                className="px-4 py-2 rounded-xl font-semibold bg-[#B4E197] text-white hover:bg-[#83BD75]"
                             >
                                 마지막으로 »
                             </button>

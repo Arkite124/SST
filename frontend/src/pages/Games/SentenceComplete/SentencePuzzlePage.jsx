@@ -1,23 +1,14 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import PuzzleGame from '@/components/puzzle/PuzzleGame';
 import GameButton from '@/components/common/GameButton';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
-import {useSelector} from "react-redux";
-import {toast} from "react-toastify";
 
 const SentencePuzzlePage = () => {
     const navigate = useNavigate();
-    useAuthLoad()
-    const { user } = useSelector((state) => state.auth);
-    useEffect(() => {
-        if (user == null) {
-            toast.error("로그인이 필요합니다", { autoClose: 2000 });
-            navigate("/", { replace: true }); // 홈으로 이동
-        }
-    }, [user, navigate]);
+    useAuthLoad();
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-400 to-blue-500 py-8 px-4">
+        <div className="min-h-[70%] bg-gradient-to-br from-green-400 to-blue-500 py-8 px-4">
             <div className="max-w-6xl mx-auto">
                 <div className="mb-4 flex justify-between items-center">
                     <GameButton

@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import axiosInstance from "@/utils/axiosInstance.js";
+import { useModal } from "@/contexts/ModalContext.jsx";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function ParentBoardPage() {
     const [posts, setPosts] = useState([]);
@@ -14,43 +16,48 @@ export default function ParentBoardPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [page, setPage] = useState(1);
-    const [size, setSize] = useState(10);
-    const navigate = useNavigate();
+    const [size] = useState(10);
 
-    const user = useSelector((state) => state.auth.user); // ✅ Redux user 가져오기
+    const navigate = useNavigate();
+    const { user } = useSelector((state) => state.auth);
+
+    const { alert, confirm } = useModal();
+    useCheckUser();
     useAuthLoad();
 
-    // 📖 목록 불러오기
+    // 📌 목록 조회
     const fetchPosts = async () => {
         setLoadingList(true);
         setError("");
+
         try {
             const res = await axios.get(`/community/parent/posts?page=${page}&size=${size}`);
             setPosts(res.data || []);
         } catch (err) {
             console.error("❌ 목록 실패:", err);
             if (err.response?.status === 401) {
-                alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+                await alert("로그인이 필요합니다", "세션이 만료되었습니다. 다시 로그인해주세요.");
                 navigate("/login");
             } else {
-                setError("목록을 불러오지 못했습니다.");
+                await alert("오류 발생", "목록을 불러오는 데 실패했습니다.");
             }
         } finally {
             setLoadingList(false);
         }
     };
 
-    // 📝 게시글 작성
+    // 📌 게시글 등록
     const addPost = async (e) => {
         e.preventDefault();
 
         if (!user) {
-            alert("로그인이 필요합니다.");
+            await alert("로그인이 필요합니다", "세션이 만료되었습니다. 다시 로그인해주세요.");
             navigate("/login");
             return;
         }
+
         if (!title.trim() || !content.trim()) {
-            alert("제목과 내용을 입력해주세요!");
+            await alert("등록 실패", "제목과 내용을 입력해주세요!");
             return;
         }
 
@@ -73,41 +80,46 @@ export default function ParentBoardPage() {
                 ...res.data,
             };
 
-            // 낙관적 업데이트
             setPosts((prev) => [newPost, ...prev]);
 
-            // 입력 초기화
+            await alert("등록 완료", "게시글이 성공적으로 등록되었습니다.");
+
             setTitle("");
             setCategory("");
             setContent("");
         } catch (err) {
             console.error("추가 실패:", err);
             if (err.response?.status === 401) {
-                alert("로그인이 필요합니다.");
+                await alert("로그인이 필요합니다", "세션이 만료되었습니다.");
                 navigate("/login");
             } else {
-                setError("게시글 등록 중 오류가 발생했습니다.");
+                await alert("등록 실패", "게시글 등록 중 오류가 발생했습니다.");
             }
         } finally {
             setSubmitting(false);
         }
     };
 
-    // 🗑 삭제
+    // 📌 게시글 삭제
     const deletePost = async (id) => {
-        if (!window.confirm("정말 삭제하시겠습니까?")) return;
+        const ok = await confirm("삭제 확인", "정말로 이 게시글을 삭제하시겠습니까?");
+        if (!ok) return;
+
         const prev = posts;
-        setPosts(posts.filter((p) => p.id !== id)); // 낙관적 삭제
+        setPosts(posts.filter((p) => p.id !== id));
+
         try {
             await axios.delete(`/community/parent/posts/${id}`);
+            await alert("삭제 완료", "게시글이 삭제되었습니다.");
         } catch (err) {
             console.error("삭제 실패:", err);
-            setPosts(prev); // 롤백
+            setPosts(prev);
+
             if (err.response?.status === 401) {
-                alert("세션이 만료되었습니다.");
+                await alert("로그인이 필요합니다", "세션이 만료되었습니다.");
                 navigate("/login");
             } else {
-                setError("게시글 삭제 중 오류가 발생했습니다.");
+                await alert("삭제 실패", "게시글 삭제 중 오류가 발생했습니다.");
             }
         }
     };
@@ -118,9 +130,9 @@ export default function ParentBoardPage() {
 
     return (
         <div className="p-8">
-            <h1 className="text-2xl font-bold mb-4 text-[#4E944F]">부모 커뮤니티</h1>
+            <h1 className="text-2xl font-bold mb-4 text-[#4E944F]">정보의 샘</h1>
 
-            {/* ✅ 게시글 작성 폼 */}
+            {/* 입력 폼 */}
             <form
                 onSubmit={addPost}
                 className="border rounded-2xl p-4 mb-6 bg-[#E9EFC0] border-[#B4E197] space-y-4"
@@ -135,7 +147,7 @@ export default function ParentBoardPage() {
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
                         placeholder="예: 육아, 교육, 가정소통 등"
-                        className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white"
+                        className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] bg-white"
                         disabled={submitting}
                     />
                 </div>
@@ -150,7 +162,7 @@ export default function ParentBoardPage() {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="게시글 제목을 입력하세요"
-                        className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white"
+                        className="border-2 border-[#B4E197] p-2 rounded-xl"
                         disabled={submitting}
                     />
                 </div>
@@ -164,7 +176,7 @@ export default function ParentBoardPage() {
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         placeholder="게시글 내용을 입력하세요"
-                        className="border-2 border-[#B4E197] p-2 rounded-xl focus:ring-2 focus:ring-[#83BD75] focus:outline-none bg-white h-24 resize-none"
+                        className="border-2 border-[#B4E197] p-2 rounded-xl h-24 resize-none"
                         disabled={submitting}
                     />
                 </div>
@@ -182,7 +194,7 @@ export default function ParentBoardPage() {
                 {error && <p className="text-red-500 mt-2">{error}</p>}
             </form>
 
-            {/* 게시글 목록 */}
+            {/* 📄 게시글 목록 */}
             {loadingList ? (
                 <p className="text-gray-500 mb-2">불러오는 중...</p>
             ) : posts.length === 0 ? (
@@ -199,10 +211,10 @@ export default function ParentBoardPage() {
 
                         return (
                             <li
-                                key={post.id || `temp-${post.title}`}
+                                key={post.id}
                                 className="border p-3 rounded-2xl flex flex-col items-start bg-white"
                             >
-                                {/* 상단: 카테고리 + 날짜 */}
+                                {/* 카테고리 + 날짜 */}
                                 <span className="flex w-full justify-between items-center mb-1">
                                     <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
                                         #{post.category || "기타"}
@@ -213,15 +225,18 @@ export default function ParentBoardPage() {
                                 {/* 제목 */}
                                 <span className="font-semibold mb-1">{post.title}</span>
 
-                                {/* 내용 + 삭제 버튼 */}
+                                {/* 내용 + 삭제버튼 */}
                                 <span className="flex w-full justify-between items-start mt-2">
                                     <span className="whitespace-pre-wrap">{post.content}</span>
-                                    <button
-                                        onClick={() => deletePost(post.id)}
-                                        className="text-red-600 hover:text-red-700 text-sm"
-                                    >
-                                        삭제
-                                    </button>
+                                    {/* 부모 게시판 → 본인이 아니어도 작성 가능? 규칙에 따라 다름 */}
+                                    {user && post.user_id === user.id && (
+                                        <button
+                                            onClick={() => deletePost(post.id)}
+                                            className="text-red-600 hover:text-red-700 text-sm"
+                                        >
+                                            삭제
+                                        </button>
+                                    )}
                                 </span>
                             </li>
                         );

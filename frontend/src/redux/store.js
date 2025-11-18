@@ -35,7 +35,7 @@ const rootReducer = combineReducers({
     userBans:userBanReducer,
 });
 
-// ✅ persistConfig (auth만 저장)
+// ✅ persistConfig (auth만 저장) 여기부터 안건들면 됩니다.
 const persistConfig = {
     key: "root",
     storage,

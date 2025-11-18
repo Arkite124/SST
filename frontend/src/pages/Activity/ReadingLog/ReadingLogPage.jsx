@@ -9,7 +9,9 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance.js";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import { toast } from "react-toastify";
-import { useModal } from "@/contexts/ModalContext";   // ⭐ 통합 모달 사용
+import { useModal } from "@/contexts/ModalContext";
+import {useSelector} from "react-redux";
+import useCheckUser from "@/hooks/useCheckUser.jsx";   // ⭐ 통합 모달 사용
 
 export default function ReadingLogPage() {
     const [logs, setLogs] = useState([]);
@@ -18,7 +20,7 @@ export default function ReadingLogPage() {
     const { openModal, confirm } = useModal(); // ⭐ 통합 모달
     useAuthLoad();
     const navigate = useNavigate();
-
+    useCheckUser();
     const fetchLogs = async () => {
         setLoading(true);
         try {

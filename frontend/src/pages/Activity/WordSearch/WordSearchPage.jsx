@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState} from "react";
 import { useNavigate } from "react-router-dom";
 import { getWordSearchResult } from "@/utils/activities.js"; // ✅ 기존 API 통합
 import Card from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
+import useAuthLoad from "@/hooks/useAuthLoad.jsx";
+import {useModal} from "@/contexts/ModalContext.jsx";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function WordSearchPage() {
     const [query, setQuery] = useState("");
@@ -11,10 +14,16 @@ export default function WordSearchPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    useAuthLoad()
+    useCheckUser();
+    const { alert } = useModal();
 
     // 🔍 단어 검색
     const handleSearch = async () => {
-        if (!query.trim()) return alert("검색어를 입력하세요!");
+        if (!query.trim()) {
+            await alert("안내", "검색어를 입력하세요!");
+            return;
+        }
         setLoading(true);
         setError("");
         setResult(null);

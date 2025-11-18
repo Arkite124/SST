@@ -1,9 +1,6 @@
-import {NavLink, Outlet, useNavigate} from "react-router-dom";
+import {NavLink, Outlet} from "react-router-dom";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import bgImg from "@/assets/bgImg.png";
-import {useSelector} from "react-redux";
-import {useEffect} from "react";
-import {toast} from "react-toastify";
 
 export default function GamesPage() {
     const tabs = [
@@ -11,15 +8,7 @@ export default function GamesPage() {
         { name: "단어 뜻 맞추기", path: "word-meaning" },
         { name: "문장 완성하기", path: "sentence-complete" },
     ];
-    const navigate=useNavigate()
-    useAuthLoad()
-    const { user } = useSelector((state) => state.auth);
-    useEffect(() => {
-        if (user == null) {
-            toast.error("이용하려면 로그인 해주세요.", { autoClose: 2000 });
-            navigate("/login")// 로그인 사이트으로 이동
-        }
-    }, [user, navigate]);
+    useAuthLoad();
     return (
         <div
             className="relative w-full py-10 px-4 text-center bg-[#F8FAF4] backdrop-blur-md shadow-inner snap-start flex flex-col items-center justify-center"

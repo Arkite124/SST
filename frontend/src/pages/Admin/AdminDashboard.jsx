@@ -7,6 +7,7 @@ import {
   PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer
 } from "recharts";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 const COLORS = ["#4E944F", "#82ca9d", "#ffc658", "#8884d8", "#FF6B6B"];
 

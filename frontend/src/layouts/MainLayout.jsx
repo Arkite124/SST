@@ -10,9 +10,8 @@ export default function MainLayout() {
         <div className="flex flex-col min-h-screen bg-[#F6F6F6] text-[#263035]">
             {/* 헤더를 fixed로 만들고 z-index 적용 */}
             <Header className="fixed top-0 left-0 w-full z-50 "/>
-
             {/* main에 padding-top으로 header 높이 만큼 공간 확보 */}
-            <main className="flex-grow">  {/* Header 높이만큼 패딩 */}
+            <main className="flex-grow p-auto">
                 <Outlet />
                 <ToastContainer position="top-center" autoClose={3300} />
             </main>

@@ -9,7 +9,9 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance.js";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import { toast } from "react-toastify";
-import { useModal } from "@/contexts/ModalContext";   // ⭐ 통합 모달 훅
+import { useModal } from "@/contexts/ModalContext";
+import {useSelector} from "react-redux";
+import useCheckUser from "@/hooks/useCheckUser.jsx";   // ⭐ 통합 모달 훅
 
 export default function DailyWritingPage() {
     const [writings, setWritings] = useState([]);
@@ -17,7 +19,7 @@ export default function DailyWritingPage() {
     const { openModal, confirm } = useModal();   // ⭐ 모달 API 사용
     useAuthLoad();
     const navigate = useNavigate();
-
+    useCheckUser()
     const fetchWritings = async () => {
         setLoading(true);
         try {

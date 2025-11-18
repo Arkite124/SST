@@ -5,6 +5,7 @@ import { playTTS, stopAudio } from "@/redux/slices/audioSlice";
 import { endGame, resetTest, submitAnswer as submitAnswerAction, nextQuestion } from "@/redux/slices/ReadingSlice.js";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import { readingApi } from "@/utils/readingApi";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 const MAX_QUESTIONS = 10;
 
@@ -22,7 +23,7 @@ const ReadingTest = () => {
     const [hasAnswered, setHasAnswered] = useState(false); // ✅ 답변 완료 상태
 
     useAuthLoad();
-
+    useCheckUser();
     // 🔹 게임 시작 - readingApi 기반
     useEffect(() => {
         if (!hasFetchedRef.current && user?.id) {

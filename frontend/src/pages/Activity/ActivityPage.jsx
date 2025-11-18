@@ -1,4 +1,4 @@
-import {NavLink, Outlet, useNavigate} from "react-router-dom";
+import {NavLink, Outlet} from "react-router-dom";
 import bgImg from "@/assets/bgImg.png";
 
 export default function ActivityPage() {

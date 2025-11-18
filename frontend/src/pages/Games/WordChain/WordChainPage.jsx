@@ -9,15 +9,16 @@ import GameTimer from '@/components/common/GameTimer';
 import Notification from '@/components/common/Notification';
 import GameButton from '@/components/common/GameButton.jsx';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 const WordChainPage = () => {
     const navigate = useNavigate();
     const { state, actions } = useChainGame();
     useAuthLoad()
-
+    useCheckUser();
     return (
-        <div className="h-[60vh] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center p-4">
-            <div className="w-full max-w-4xl h-full max-h-[60vh] flex flex-col">
+        <div className="min-h-[70%] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center p-4">
+            <div className="w-full max-w-4xl h-full flex flex-col">
                 {/* 헤더 */}
                 <div className="flex justify-between items-center mb-2">
                     <GameButton

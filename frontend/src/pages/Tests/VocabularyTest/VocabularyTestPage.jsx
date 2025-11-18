@@ -9,6 +9,7 @@ import {
     setEndGame
 } from "@/redux/slices/vocabularySlice";
 import { vocabularyApi } from "@/utils/vocabularyApi.js";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 const MAX_QUESTIONS = 10;
 
@@ -29,7 +30,7 @@ const VocabularyTest = () => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [hasAnswered, setHasAnswered] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    useCheckUser();
     const currentQuestion = questions[currentQuestionIndex];
     const questionCount = currentQuestionIndex + 1;
 

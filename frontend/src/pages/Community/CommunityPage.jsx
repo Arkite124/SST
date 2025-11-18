@@ -13,13 +13,6 @@ export default function CommunityPage() {
         // ✅ parent_token 인증 완료 후에만 부모 커뮤니티 표시
         ...(!loading && parent!=null ? [{ name: "부모 커뮤니티", path: "parent-board" }] : []),
     ];
-    const user  = useSelector((state) => state.auth.user);
-    useEffect(() => {
-        if (user == null) {
-            toast.error("이용하려면 로그인 해주세요.", { autoClose: 2000 });
-            navigate("/login")// 로그인 사이트으로 이동
-        }
-    }, [user, navigate]);
     return (
         <div className="flex flex-col items-center w-full p-1">
             <div className="flex gap-2 mb-12 border-b border-[#B4E197] pb-2">

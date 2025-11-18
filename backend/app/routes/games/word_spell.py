@@ -22,7 +22,6 @@ class StartGameRequest(BaseModel):
     game_id: str
     difficulty: str = "medium"   # ✅ user_id 제거
 
-
 class StartGameResponse(BaseModel):
     game_id: str
     message: str
@@ -30,12 +29,10 @@ class StartGameResponse(BaseModel):
     first_initial: Optional[str] = None
     first_definition: Optional[str] = None
 
-
 class SubmitAnswerRequest(BaseModel):
     game_id: str
     answer: str
     used_problems: Optional[List[str]] = []   # ✅ user_id 제거
-
 
 class SubmitAnswerResponse(BaseModel):
     correct: bool
@@ -48,7 +45,6 @@ class SubmitAnswerResponse(BaseModel):
 
 # 🔥 전역 변수
 word_spell_game = None
-
 
 def set_word_spell_game(game_instance):
     global word_spell_game
@@ -88,7 +84,6 @@ def start_game(
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"게임 시작 실패: {str(e)}")
-
 
 # 🔹 정답 제출
 @router.post("/submit", response_model=SubmitAnswerResponse)
