@@ -148,13 +148,6 @@ def get_bans_with_userinfo(db: Session, page: int = 1, size: int = 10):
         "pages": pages,
     }
 
-
-# -------------------------------
-# 📘 FastAPI Router
-# -------------------------------
-router = APIRouter(prefix="/admin/users", tags=["User Ban"])
-
-
 @router.get("/bans", response_model=PaginatedSimpleBans)
 def read_bans(
     page: int = 1,

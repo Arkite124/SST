@@ -13,11 +13,10 @@ from dotenv import load_dotenv
 from app.games.sentence_puzzle_game import SentencePuzzleGame
 from app.games.word_chain_game import WordChainGame
 from app.games.word_spell_game import InitialQuizGame
-from app.routes.admin.user_management import router as user_management
+from app.routes.admin import admin_router
 from app.routes.games import game_router, sentence_puzzle, word_chain, word_spell
 
 # 라우터 관련
-from app.routes.admin.admin_dashboard import router as admin_dashboard
 from app.routes.customer_center.subscription import router as subscription
 from app.routes.customer_center.customer_support import router as customer_support
 from app.routes.customer_dashboard.parent_dashboard import router as parent_dashboard
@@ -74,13 +73,13 @@ app.include_router(check_duplicate)
 app.include_router(find_user, prefix="/find_user", tags=["find_user"])
 app.include_router(activities)
 app.include_router(subscription)
-app.include_router(admin_dashboard)
+app.include_router(admin_router)
 app.include_router(parent_dashboard)
 app.include_router(child_dashboard)
 app.include_router(game_router)
 app.include_router(test_router, prefix="/test", tags=["test"])
 app.include_router(parent_login)
-app.include_router(user_management)
+
 # ✅ 로깅
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
