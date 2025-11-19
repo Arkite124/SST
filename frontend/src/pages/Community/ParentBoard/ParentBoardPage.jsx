@@ -16,7 +16,7 @@ export default function ParentBoardPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [page, setPage] = useState(1);
-    const [size] = useState(10);
+    const [size,setSize] = useState(10);
 
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
@@ -228,7 +228,7 @@ export default function ParentBoardPage() {
                                 {/* 내용 + 삭제버튼 */}
                                 <span className="flex w-full justify-between items-start mt-2">
                                     <span className="whitespace-pre-wrap">{post.content}</span>
-                                    {/* 부모 게시판 → 본인이 아니어도 작성 가능? 규칙에 따라 다름 */}
+                                    {/* 부모 게시판 → 본인이 아니면 작성 불가 */}
                                     {user && post.user_id === user.id && (
                                         <button
                                             onClick={() => deletePost(post.id)}

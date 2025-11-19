@@ -60,12 +60,9 @@ export default function StudentDiscussionPage() {
                 book_title: bookTitle,
                 content,
             });
-
-            await alert("등록 완료", "게시글이 성공적으로 등록되었습니다.");
-
+            await confirm("등록 완료", "게시글이 성공적으로 등록되었습니다.");
             setPage(1);
             fetchPosts();
-
             setDiscussionTags("");
             setTitle("");
             setBookTitle("");
@@ -80,15 +77,13 @@ export default function StudentDiscussionPage() {
 
     // 게시글 삭제
     const deletePost = async (id) => {
-        const ok = await confirm("삭제 확인", "정말 삭제하시겠습니까?");
+        const ok = await alert("삭제 확인", "정말 삭제하시겠습니까?");
         if (!ok) return;
-
         const prev = posts;
         setPosts(posts.filter((p) => p.id !== id));
-
         try {
             await axiosInstance.delete(`/community/student/${id}`);
-            await alert("삭제 완료", "게시글이 삭제되었습니다.");
+            await confirm("삭제 완료", "게시글이 삭제되었습니다.");
             fetchPosts();
         } catch (err) {
             setPosts(prev);

@@ -8,7 +8,7 @@ export default function AdminDashboardPage() {
     const {loading} = useSelector((state) => state.auth);
     const user=useSelector((state)=>state.auth.user)
     useAuthLoad();
-    const navigate=useNavigate()
+    const navigate=useNavigate();
     useEffect(() => {
         if (user.role !== "admin" && (user.name!=="admin" || user.name!=="어드민"|| user.name!=="관리자")) {
             toast.error("관리자 계정이 아닙니다.", { autoClose: 2000 });
@@ -19,6 +19,7 @@ export default function AdminDashboardPage() {
         { name: "대시 보드", path: "dashboard" },
         { name: "유저 관리", path: "user_ban" },
     ];
+
     return (
         <div className="flex flex-col items-center w-full p-1">
             <div className="flex gap-2 mb-12 border-b border-[#B4E197] pb-2">
