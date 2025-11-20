@@ -36,12 +36,18 @@ def get_db():
 
 @router.get("/login")
 async def google_login(request: Request):
+    """
+    구글로 로그인 인증 요청을 보내는 엔드포인트입니다.
+    """
     redirect_uri = request.url_for("google_callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/callback")
 async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """
+    콜백을 받는 엔드포인트 입니다.
+    """
     token = await oauth.google.authorize_access_token(request)
 
     id_token = token.get("id_token")

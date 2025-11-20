@@ -65,16 +65,71 @@ class ParentForumPostRead(BaseModel):
 # ForwardRef 갱신
 ParentForumPostRead.model_rebuild()
 
-@router.get("/posts", response_model=list[ParentForumPostRead])
+class ParentForumPostListResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[ParentForumPostRead]
+
+
+@router.get("/posts", response_model=ParentForumPostListResponse)
 def get_posts(
-    category:Optional[str] = None,
+    category: Optional[str] = None,
     page: int = Query(1, ge=1, description="페이지 번호"),
     size: int = Query(10, ge=1, le=20, description="한 페이지당 게시글 수"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    summary="학부모 게시판 게시글 조회",
+    description="""
+학부모 게시판의 **부모 글(최상위 게시글)** 목록을 페이지네이션 형태로 조회합니다.
+
+### 주요 기능
+- 페이지 번호(page)와 페이지 크기(size)를 기준으로 게시글을 조회합니다.
+- `parent_id`가 NULL인 **부모 글만 조회**합니다.
+- 각 게시글에 포함된 **댓글 수(comment_count)** 를 함께 계산합니다.
+- 옵션으로 `category` 필터를 사용할 수 있습니다.
+- 결과는 `total`, `page`, `size`, `items` 구조로 반환됩니다.
+
+###  Query Parameters
+- **page (int)** — 페이지 번호 (기본값: 1)
+- **size (int)** — 한 페이지당 가져올 게시글 수 (기본값: 10)
+- **category (str | Optional)** — 특정 카테고리로 필터링 (예: "system", "payment", "etc")
+
+###  Response Example
+```json
+{
+  "total": 52,
+  "page": 1,
+  "size": 10,
+  "items": [
+    {
+      "id": 1,
+      "title": "공지사항",
+      "content": "중요 공지입니다.",
+      "category": "system",
+      "is_important": true,
+      "comment_count": 3,
+      "user": { "nickname": "관리자" },
+      "created_at": "2025-01-01T12:00:00",
+      "updated_at": "2025-01-01T12:00:00"
+    }
+  ]
+}"""
 ):
+    """
+    학부모 게시판 게시글 목록 조회 엔드포인트
+    """
     offset = (page - 1) * size
     comment = aliased(ParentForumPost)
 
+    # ✅ 총 게시글 수 (부모글만 + 카테고리 조건 적용)
+    total_query = db.query(func.count(ParentForumPost.id)).filter(
+        ParentForumPost.parent_id == None
+    )
+    if category:
+        total_query = total_query.filter(ParentForumPost.category == category)
+    total = total_query.scalar()
+
+    # ✅ 댓글 수 포함된 subquery
     subq = (
         db.query(
             ParentForumPost.id.label("post_id"),
@@ -86,45 +141,78 @@ def get_posts(
         .subquery()
     )
 
+    # ✅ 본문 조회
     query = (
         db.query(ParentForumPost, subq.c.comment_count)
         .join(subq, subq.c.post_id == ParentForumPost.id)
-        # 🔥 수정된 where 절
-        .filter(ParentForumPost.parent_id == None)  # 부모 글만 가져오기
-        .filter(ParentForumPost.category == category if category else True)  # 카테고리 조건이 있으면 적용
-        .options(joinedload(ParentForumPost.user))  # ✅ 유저 닉네임 미리 로딩
+        .filter(ParentForumPost.parent_id == None)
+        .options(joinedload(ParentForumPost.user))
         .order_by(ParentForumPost.created_at.desc())
         .offset(offset)
         .limit(size)
     )
 
+    if category:
+        query = query.filter(ParentForumPost.category == category)
+
     results = query.all()
 
-    response = []
-    for post, comment_count in results:
-        response.append(
-            ParentForumPostRead(
-                id=post.id,
-                title=post.title,
-                parent_id=post.parent_id,
-                content=post.content,
-                category=post.category,
-                is_important=post.is_important,
-                created_at=post.created_at,
-                updated_at=post.updated_at,
-                comment_count=comment_count,
-                user=post.user   # ✅ UserNickname 모델로 자동 직렬화
-            )
+    # 🔥 변환
+    items = [
+        ParentForumPostRead(
+            id=post.id,
+            title=post.title,
+            parent_id=post.parent_id,
+            content=post.content,
+            category=post.category,
+            is_important=post.is_important,
+            created_at=post.created_at,
+            updated_at=post.updated_at,
+            comment_count=comment_count,
+            user=post.user
         )
-    return response
+        for post, comment_count in results
+    ]
 
-@router.get("/posts/{post_id}",response_model=ParentForumPostRead)
+    # 🔥 최종 응답
+    return {
+        "total": total,
+        "page": page,
+        "size": size,
+        "items": items
+    }
+
+@router.get(
+    "/posts/{post_id}",
+    response_model=ParentForumPostRead,
+    summary="학부모 게시판 게시글 상세 조회",
+    description="""
+특정 게시글을 ID로 조회합니다.
+
+### 주요 기능
+- 게시글 데이터 + 작성자 정보 포함
+- 존재하지 않을 경우 404 반환
+"""
+)
 def get_post(post_id: int, db: Session = Depends(get_db)):
     post = db.query(ParentForumPost).filter(ParentForumPost.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail={"성공여부":False,"이유":"존재하지 않는 게시물입니다."})
     return post
-@router.get("/posts/search",response_model=list[ReadingForumPostRead])
+@router.get(
+    "/posts/search",
+    response_model=list[ReadingForumPostRead],
+    summary="학부모 게시판 게시글 검색",
+    description="""
+제목 또는 내용에 특정 단어가 포함된 게시글을 검색합니다.
+
+### 주요 기능
+- 부모 게시글만 검색
+- 제목 + 내용 모두 검색 후 합침
+- 중복 제거
+- 최신순 정렬
+"""
+)
 def search_parents_posts(word: str, db: Session = Depends(get_db)):
     posts_title = db.query(ParentForumPost).filter(ParentForumPost.title.contains(word)).filter(ParentForumPost.parent_id is None).all()
     posts_contents=db.query(ParentForumPost).filter(ParentForumPost.content.contains(word)).filter(ParentForumPost.parent_id is None).all()
@@ -138,7 +226,18 @@ def search_parents_posts(word: str, db: Session = Depends(get_db)):
     unique_result = {item.id: item for item in result}.values()
     return sorted(unique_result, key=lambda x: x.created_at, reverse=True)
 
-@router.post("/posts", response_model=ParentForumPostCreate)
+@router.post(
+    "/posts",
+    response_model=ParentForumPostCreate,
+    summary="학부모 게시판 게시글 작성",
+    description="""
+새로운 부모 게시글 또는 답글(부모 ID 존재 시)을 생성합니다.
+
+### 주요 기능
+- 로그인한 사용자만 생성 가능
+- 카테고리, 중요글 여부 설정 가능
+"""
+)
 def create_post(
     request: ParentForumPostCreate,
     user: Users = Depends(get_current_user),
@@ -159,7 +258,18 @@ def create_post(
     db.refresh(new_post)
     return new_post
 
-@router.patch("/posts/{post_id}", response_model=ParentForumPostUpdate)
+@router.patch(
+    "/posts/{post_id}",
+    response_model=ParentForumPostUpdate,
+    summary="학부모 게시판 게시글 수정",
+    description="""
+특정 게시글의 내용을 수정합니다.
+
+### 주요 기능
+- 작성자 본인만 수정 가능
+- 제목, 내용, 중요 여부, 카테고리 개별 수정 가능
+"""
+)
 def update_post(
     request: ParentForumPostUpdate,
     post_id: int,
@@ -194,9 +304,21 @@ def update_post(
     return {"로그": "수정될 것이 없거나 실패했습니다."}
 
 # ✅ 댓글 생성
-@router.post("/comments", response_model=ParentForumPostRead)
+@router.post(
+    "/comments",
+    response_model=ParentForumPostRead,
+    summary="학부모 게시판 댓글 작성",
+    description="""
+특정 부모글에 댓글을 작성합니다.
+
+### 주요 기능
+- 부모 게시글 존재 여부 확인
+- 로그인한 사용자만 댓글 작성 가능
+- 댓글도 제목 입력 가능
+"""
+)
 def create_comment(
-    parent_id: int,   # 어떤 부모글의 댓글인지
+    parent_id: int,
     request: ParentForumPostCreate,
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -221,7 +343,18 @@ def create_comment(
 
 
 # ✅ 특정 부모글의 댓글 리스트 조회
-@router.get("/comments/{parent_id}", response_model=list[ParentForumPostRead])
+@router.get(
+    "/comments/{parent_id}",
+    response_model=list[ParentForumPostRead],
+    summary="학부모 게시판 댓글 목록 조회",
+    description="""
+특정 부모 게시글에 달린 댓글 목록을 조회합니다.
+
+### 주요 기능
+- 오래된 순서대로 정렬
+- 부모 ID 기반 댓글 조회
+"""
+)
 def get_comments(
     parent_id: int,
     db: Session = Depends(get_db)
@@ -235,7 +368,19 @@ def get_comments(
     return comments
 
 # ✅ 댓글 수정
-@router.patch("/comments/{comment_id}", response_model=ParentForumPostUpdate)
+@router.patch(
+    "/comments/{comment_id}",
+    response_model=ParentForumPostUpdate,
+    summary="학부모 게시판 댓글 수정",
+    description="""
+특정 댓글을 수정합니다.
+
+### 주요 기능
+- 로그인한 사용자 본인만 수정 가능
+- 내용만 수정 가능
+- 수정 시 updated_at 자동 갱신
+"""
+)
 def update_comment(
     comment_id: int,
     request: ParentForumPostUpdate,
@@ -256,7 +401,17 @@ def update_comment(
     return comment
 
 # ✅ 댓글 삭제
-@router.delete("/comments/{comment_id}")
+@router.delete(
+    "/comments/{comment_id}",
+    summary="학부모 게시판 댓글 삭제",
+    description="""
+특정 댓글을 삭제합니다.
+
+### 주요 기능
+- 댓글 작성자 본인만 삭제 가능
+- 삭제 후 성공 여부 반환
+"""
+)
 def delete_comment(
     comment_id: int,
     user: Users = Depends(get_current_user),
@@ -270,7 +425,17 @@ def delete_comment(
     db.delete(comment)
     db.commit()
     return {"성공여부": True}
-@router.delete("/posts/{list_id}")
+@router.delete(
+    "/posts/{list_id}",
+    summary="학부모 게시판 게시글 삭제",
+    description="""
+특정 게시글을 삭제합니다.
+
+### 주요 기능
+- 작성자 본인만 삭제 가능
+- 삭제 성공 시 `{ "성공여부": true }` 반환
+"""
+)
 def delete_post(
     list_id: int,
     user: Users = Depends(get_current_user),

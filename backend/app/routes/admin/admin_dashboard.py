@@ -36,7 +36,7 @@ def get_user_chart(
     current_admin: Users = Depends(get_current_admin)
 ):
     """
-    📊 최근 1개월간 유저 관련 추이 (신규 가입자 수, 밴 수)
+    최근 1개월간 유저 관련 추이 (신규 가입자 수, 밴 수)
     """
     new_users = (
         db.query(
@@ -83,7 +83,7 @@ def get_subscription_chart(
     current_admin: Users = Depends(get_current_admin)
 ):
     """
-    📊 최근 1개월간 플랜별 일별 매출 및 구독자 수
+    최근 1개월간 플랜별 일별 매출 및 구독자 수
     """
     data = (
         db.query(
@@ -128,7 +128,7 @@ def get_learning_chart(
     current_admin: Users = Depends(get_current_admin)
 ):
     """
-    📊 최근 1개월간 테스트 점수 및 게임 횟수 추이
+    최근 1개월간 테스트 점수 및 게임 횟수 추이
     """
     test_data = (
         db.query(
@@ -184,7 +184,7 @@ def get_content_chart(
     current_admin: Users = Depends(get_current_admin)
 ):
     """
-    📊 최근 1개월간 일별 글쓰기, 독서록 수 및 기분 평균
+    최근 1개월간 일별 글쓰기, 독서록 수 및 기분 평균
     """
     writings = (
         db.query(
@@ -234,7 +234,7 @@ def get_support_chart(
     current_admin: Users = Depends(get_current_admin)
 ):
     """
-    📊 최근 1개월간 고객센터 문의 상태 / 카테고리 분포
+    최근 1개월간 고객센터 문의 상태 / 카테고리 분포
     """
     category_data = (
         db.query(CustomerSupport.category, func.count(CustomerSupport.id))

@@ -194,7 +194,7 @@ def lift_ban(
 ):
     ban = lift_ban(db, ban_id)
     if not current_admin:
-        raise HTTPException(status_code=404, detail="존재하지 않는 계정이거나 권한이 없습니다.")
+        raise HTTPException(status_code=403, detail="관리자 권한이 없습니다.")
     if not ban:
-        raise HTTPException(status_code=404, detail="Ban not found")
+        raise HTTPException(status_code=404, detail="해당 유저의 벤 내역을 찾을 수 없습니다.")
     return ban

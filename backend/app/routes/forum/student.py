@@ -69,7 +69,30 @@ class ReadingForumPostListResponse(BaseModel):
     page: int
     size: int
     items: List[ReadingForumPostRead]
-@router.get("/posts", response_model=ReadingForumPostListResponse)
+@router.get(
+    "/posts",
+    response_model=ReadingForumPostListResponse,
+    summary="독서토론 게시글 목록 조회",
+    description="""
+독서토론 게시판의 **부모 게시글 목록**을 페이지네이션 형태로 조회합니다.
+
+### 주요 기능
+- `parent_id`가 NULL인 부모 글만 조회
+- 페이지 번호(page), 페이지 크기(size)를 통한 페이지네이션 처리
+- 게시글별 **댓글 개수(comment_count)** 포함
+- 작성자 정보(UserNickname) 포함
+
+### Query Parameters
+- `page`: 페이지 번호 (기본값: 1)
+- `size`: 한 페이지의 게시글 수 (기본값: 10)
+
+### Response Fields
+- `total`: 전체 부모 게시글 수
+- `page`: 현재 페이지
+- `size`: 페이지당 게시글 수
+- `items`: 게시글 목록 (ReadingForumPostRead)
+"""
+)
 def get_posts(
     page: int = Query(1, ge=1, description="페이지 번호"),
     size: int = Query(10, ge=1, le=50, description="한 페이지당 게시글 수"),
@@ -124,14 +147,42 @@ def get_posts(
     # ✅ total 포함 응답 반환
     return {"total": total, "page": page, "size": size, "items": items}
 
-@router.get("/posts/{list_id}",response_model=ReadingForumPostRead)
+@router.get(
+    "/posts/{list_id}",
+    response_model=ReadingForumPostRead,
+    summary="읽기토론 게시글 상세 조회",
+    description="""
+특정 독서토론 게시글을 ID로 조회합니다.
+
+### 주요 기능
+- 존재하지 않는 게시물 ID 요청 시 404 오류 반환
+- 작성자 정보 포함
+"""
+)
 def get_post(list_id: int, db: Session = Depends(get_db)):
     post = db.query(ReadingForumPosts).filter(ReadingForumPosts.id == list_id).first()
     if not post:
         raise HTTPException(status_code=404, detail={"성공여부":False,"이유":"존재하지 않는 게시물입니다."})
     return post
 
-@router.get("/posts/search",response_model=list[ReadingForumPostRead])
+@router.get(
+    "/posts/search",
+    response_model=list[ReadingForumPostRead],
+    summary="독서토론 게시글 검색",
+    description="""
+지정한 키워드가 포함된 게시글을 검색합니다.
+
+### 검색 대상
+- 제목(title)
+- 내용(content)
+- 책 제목(book_title)
+
+### 주요 기능
+- 부모 게시글만 검색
+- 중복 제거
+- 최신순 정렬
+"""
+)
 def search_reading_posts(word: str, db: Session = Depends(get_db)):
     posts_contents=(db.query(ReadingForumPosts)
            .filter(ReadingForumPosts.content.contains(word))
@@ -149,7 +200,19 @@ def search_reading_posts(word: str, db: Session = Depends(get_db)):
     unique_result = {item.id: item for item in result}.values()
     return sorted(unique_result, key=lambda x: x.created_at, reverse=True)
 
-@router.post("/posts", response_model=ReadingForumPostCreate)
+@router.post(
+    "/posts",
+    response_model=ReadingForumPostCreate,
+    summary="읽기토론 게시글 작성",
+    description="""
+새로운 독서토론 게시글을 생성합니다.
+
+### 주요 기능
+- 로그인한 사용자만 생성 가능
+- 책 제목(book_title), 토론 태그(discussion_tags) 포함 가능
+- parent_id 존재 시 댓글/답글로 처리
+"""
+)
 def create_post(
     request: ReadingForumPostCreate,
     user: Users = Depends(get_current_user),
@@ -170,13 +233,26 @@ def create_post(
     db.refresh(new_post)
     return new_post
 
-@router.patch("/posts/{list_id}",response_model=ReadingForumPostUpdate)
+@router.patch(
+    "/posts/{list_id}",
+    response_model=ReadingForumPostUpdate,
+    summary="독서토론 게시글 수정",
+    description="""
+특정 독서토론 게시글을 수정합니다.
+
+### 주요 기능
+- 작성자 본인만 수정 가능
+- 제목, 내용, 책 제목, 토론 태그 수정 가능
+- 수정 시 updated_at 자동 갱신
+"""
+)
 def update_post(
     request: ReadingForumPostUpdate,
     list_id: int,
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+
     user_id=user.id
     if not request.user_id==user_id:
         raise HTTPException(status_code=401,detail={"message":"사용 권한이 없습니다."})
@@ -193,12 +269,23 @@ def update_post(
         return post
     return {"message":"수정될 것이 없거나 실패했습니다."}
 
-@router.delete("/posts/{list_id}")
+@router.delete(
+    "/posts/{list_id}",
+    summary="독서토론 게시글 삭제",
+    description="""
+특정 독서토론 게시글을 삭제합니다.
+
+### 주요 기능
+- 작성자 본인만 삭제 가능
+- 삭제 성공 시 `{ "성공여부": true }` 반환
+"""
+)
 def delete_post(
     list_id: int,
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+
     user_id=user.id
     if not user_id:
         raise HTTPException(status_code=401,detail={"message":"사용 권한이 없습니다."})
@@ -211,13 +298,25 @@ def delete_post(
     return {"성공여부": True}
 
 # ✅ 댓글 생성
-@router.post("/comments", response_model=ReadingForumPostRead)
+@router.post(
+    "/comments",
+    response_model=ReadingForumPostRead,
+    summary="독서토론 댓글 작성",
+    description="""
+지정된 부모글에 대해 댓글을 작성합니다.
+
+### 주요 기능
+- 부모 게시글이 존재해야 생성 가능
+- 로그인한 사용자 본인만 작성 가능
+"""
+)
 def create_comment(
-    parent_id: int,   # 어떤 부모글의 댓글인지
+    parent_id: int,
     request: ReadingForumPostCreate,
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+
     parent_post = db.query(ReadingForumPosts).filter(ReadingForumPosts.id == parent_id).first()
     if not parent_post:
         raise HTTPException(status_code=404, detail="부모글이 존재하지 않습니다.")
@@ -236,22 +335,45 @@ def create_comment(
 
 
 # ✅ 특정 부모글의 댓글 리스트 조회
-@router.get("/comments/{parent_id}", response_model=list[ReadingForumPostRead])
+@router.get(
+    "/comments/{parent_id}",
+    response_model=list[ReadingForumPostRead],
+    summary="독서토론 댓글 목록 조회",
+    description="""
+특정 부모 게시글(parent_id)의 댓글 목록을 조회합니다.
+
+### 주요 기능
+- 댓글은 최신 순서로 정렬되어 반환됩니다.
+"""
+)
 def get_comments(
     parent_id: int,
     db: Session = Depends(get_db)
 ):
+
     comments = (
         db.query(ReadingForumPosts)
         .filter(ReadingForumPosts.parent_id == parent_id)
-        .order_by(ReadingForumPosts.created_at.asc())
+        .order_by(ReadingForumPosts.created_at.desc())
         .all()
     )
     return comments
 
 
 # ✅ 댓글 수정
-@router.patch("/comments/{comment_id}", response_model=ReadingForumPostUpdate)
+@router.patch(
+    "/comments/{comment_id}",
+    response_model=ReadingForumPostUpdate,
+    summary="독서토론 댓글 수정",
+    description="""
+특정 댓글을 수정합니다.
+
+### 주요 기능
+- 댓글 작성자 본인만 수정 가능
+- 내용(content) 수정 가능
+- 수정 시 updated_at 갱신
+"""
+)
 def update_comment(
     comment_id: int,
     request: ReadingForumPostUpdate,
@@ -273,12 +395,23 @@ def update_comment(
 
 
 # ✅ 댓글 삭제
-@router.delete("/comments/{comment_id}")
+@router.delete(
+    "/comments/{comment_id}",
+    summary="독서토론 댓글 삭제",
+    description="""
+특정 댓글을 삭제합니다.
+
+### 주요 기능
+- 댓글 작성자 본인만 삭제 가능
+- 삭제 성공 시 `{ "성공여부": true }` 반환
+"""
+)
 def delete_comment(
     comment_id: int,
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+
     comment = db.query(ReadingForumPosts).filter(ReadingForumPosts.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=404, detail="존재하지 않는 댓글입니다.")

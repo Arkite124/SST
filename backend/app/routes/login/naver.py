@@ -1,32 +1,16 @@
-from datetime import timedelta
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
 import os
-from datetime import datetime
+from app.routes.login import create_access_token, create_refresh_token
 from models import Users as User
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from jose import jwt
 load_dotenv()
 
 router = APIRouter(prefix="/auth/naver", tags=["naver"])
 oauth = OAuth()
-
-# ✅ 환경변수
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-
-def create_access_token(user_id: int, expires_delta: int = 60):
-    expire = datetime.utcnow() + timedelta(minutes=expires_delta)
-    payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-def create_refresh_token(user_id: int, expires_days: int = 7):
-    expire = datetime.utcnow() + timedelta(days=expires_days)
-    payload = {"sub": str(user_id), "exp": expire, "type": "refresh"}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 oauth.register(
     name="naver",
@@ -48,12 +32,18 @@ def get_db():
 # 네이버 로그인 요청
 @router.get("/login")
 async def naver_login(request: Request):
+    """
+    네이버 로그인 요청을 보내는 엔드포인트 입니다.
+    """
     redirect_uri = request.url_for("naver_callback")
     return await oauth.naver.authorize_redirect(request, redirect_uri)
 
 # 네이버 콜백 처리
 @router.get("/callback")
 async def naver_callback(request: Request, db: Session = Depends(get_db)):
+    """
+    네이버 콜백 요청을 보내는 엔드포인트 입니다.
+    """
     try:
         token = await oauth.naver.authorize_access_token(request)
     except Exception as e:
@@ -86,8 +76,8 @@ async def naver_callback(request: Request, db: Session = Depends(get_db)):
     access_token = create_access_token(user.id, expires_delta=15)
     refresh_token = create_refresh_token(user.id, expires_days=7)
 
-    # ✅ JWT를 httpOnly 쿠키에 저장
     response = RedirectResponse("http://localhost:5173/")
+    # response = RedirectResponse("/")
     response.set_cookie(
         key="access_token",
         value=access_token,

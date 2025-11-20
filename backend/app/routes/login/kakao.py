@@ -1,32 +1,16 @@
-from datetime import timedelta
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
 import os
-from datetime import datetime
 from models import Users as User
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from jose import jwt
+from app.routes.login import create_access_token, create_refresh_token
 
 load_dotenv()
 router = APIRouter(prefix="/auth/kakao", tags=["kakao"])
 oauth = OAuth()
-
-# ✅ 환경변수
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-
-def create_access_token(user_id: int, expires_delta: int = 60):
-    expire = datetime.utcnow() + timedelta(minutes=expires_delta)
-    payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-def create_refresh_token(user_id: int, expires_days: int = 7):
-    expire = datetime.utcnow() + timedelta(days=expires_days)
-    payload = {"sub": str(user_id), "exp": expire, "type": "refresh"}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 oauth.register(
     name="kakao",
@@ -47,12 +31,18 @@ def get_db():
 # 카카오 로그인 요청
 @router.get("/login")
 async def kakao_login(request: Request):
+    """
+    카카오로 로그인 요청을 보내는 엔드포인트 입니다.
+    """
     redirect_uri = request.url_for("kakao_callback")
     return await oauth.kakao.authorize_redirect(request, redirect_uri)
 
 # 카카오 콜백 처리
 @router.get("/callback", name="kakao_callback")
 async def kakao_callback(request: Request, db: Session = Depends(get_db)):
+    """
+    카카오에서 콜백을 받는 엔드포인트 입니다.
+    """
     try:
         token = await oauth.kakao.authorize_access_token(request)
     except Exception as e:

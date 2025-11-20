@@ -21,12 +21,10 @@ def get_db():
         db.close()
 
 class AdditionalInfo(BaseModel):
-    id: int
     nickname: str
     age: int
     gender: str
     phone: str
-    email: str
 
     class Config:
         from_attribute = True  # ORM → Pydantic 변환 허용
@@ -38,9 +36,11 @@ def create_refresh_token(user_id: int):
     expire = datetime.now() + timedelta(days=7)
     return jwt.encode({"sub": str(user_id), "exp": expire, "type": "refresh"}, SECRET_KEY, algorithm=ALGORITHM)
 
-
 @router.post("/")
 async def save_additional_info(data: AdditionalInfo, db: Session = Depends(get_db)):
+    """
+    소셜로그인 최초 등록시 추가정보를 입력받아 저장하는 엔드포인트 입니다.
+    """
     # 1) 이메일로 사용자 찾기
     user = db.query(User).filter(User.email == data.email).first()
     if not user:

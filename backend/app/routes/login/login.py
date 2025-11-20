@@ -22,12 +22,12 @@ REFRESH_SECRET_KEY=os.environ.get("REFRESH_SECRET_KEY")
 
 def create_access_token(user_id: int, expires_delta: int = 60):
     expire = datetime.now() + timedelta(minutes=expires_delta)
-    payload = {"sub": str(user_id), "exp": expire}
+    payload = {"sub": int(user_id), "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(user_id: int, expires_days: int = 7):
     expire = datetime.now() + timedelta(days=expires_days)
-    payload = {"sub": str(user_id), "exp": expire, "type": "refresh"}
+    payload = {"sub": int(user_id), "exp": expire, "type": "refresh"}
     return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
 
 def get_db():
@@ -64,8 +64,19 @@ def get_current_admin_user(user: User = Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 전용 페이지입니다.")
     return user
 
-@router.get("/me")
+@router.get(
+    "/me",
+    summary="현재 로그인된 사용자 정보 조회",
+    description="""
+현재 로그인된 사용자의 정보를 반환합니다.
+
+### 주요 기능
+- 로그인 상태가 아닐 경우: `{"user": null}` 반환
+- 로그인 상태일 경우: id, email, name, nickname, role 등 기본 정보 반환
+"""
+)
 def profile_data(user=Depends(get_current_user)):
+
     # 로그인 안 된 경우: 200 OK + null 반환
     if user is None:
         return JSONResponse(content={"user": None}, status_code=200)
@@ -81,8 +92,28 @@ def profile_data(user=Depends(get_current_user)):
         }
     }
 # 로그인 상태 유지
-@router.post("/login")
+@router.post(
+    "/login",
+    summary="이메일 및 비밀번호 로그인",
+    description="""
+일반 계정(로컬 계정)의 이메일과 비밀번호로 로그인합니다.
+
+### 주요 기능
+- 이메일 존재 여부 확인
+- 소셜 로그인 계정인지 확인 (소셜 계정은 패스워드 로그인 불가)
+- 비밀번호 검증 (bcrypt)
+- 로그인 성공 시:
+  - access_token (1시간)
+  - refresh_token (7일)
+  을 **HTTP-Only Cookie**로 발급
+
+### Response
+- access_token / refresh_token은 쿠키로 전달
+- Body에는 `"access_token": "JWT암호화"` 형식의 예시만 반환
+"""
+)
 def login(data: LoginSchema, db: Session = Depends(get_db)):
+
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
         raise HTTPException(status_code=401, detail="존재하지 않는 계정이거나 비밀번호가 틀렸습니다.")
@@ -115,8 +146,24 @@ def login(data: LoginSchema, db: Session = Depends(get_db)):
     )
     return response
 
-@router.post("/refresh")
+@router.post(
+    "/refresh",
+    summary="Access Token 재발급",
+    description="""
+HTTP-Only 쿠키에 포함된 refresh_token을 사용하여 **새로운 access_token**을 발급합니다.
+
+### 주요 기능
+- refresh_token 유효성 검증
+- 만료되었거나 위조된 토큰인 경우 401 반환
+- 정상적인 refresh_token일 경우:
+  - 새로운 access_token 발급 및 쿠키에 저장
+
+### 주의사항
+- refresh_token 자체는 다시 재발급하지 않습니다.
+"""
+)
 def refresh_tokens(refresh_token: str = Cookie(None), db: Session = Depends(get_db)):
+
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Missing refresh token")
     try:
@@ -138,8 +185,21 @@ def refresh_tokens(refresh_token: str = Cookie(None), db: Session = Depends(get_
     response.set_cookie("access_token", new_access_token, httponly=True, max_age=900)
     return response
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="로그아웃",
+    description="""
+현재 로그인된 사용자의 세션을 종료하고 쿠키를 초기화합니다.
+
+### 주요 기능
+- access_token 쿠키 삭제
+- refresh_token 쿠키 삭제
+- 서버 세션(request.session) 초기화
+- 완전한 로그아웃 처리
+"""
+)
 def logout(request: Request):
+
     response = JSONResponse({"message": "로그아웃 성공"})
     response.set_cookie("access_token", "", httponly=True, max_age=0)
     response.set_cookie("refresh_token", "", httponly=True, max_age=0)
