@@ -36,9 +36,14 @@ from app.subscription.billiing_scheduler import start_scheduler
 from Test.vocabulary_assessment import VocabularyAssessment
 from Test.reading_assessment import ReadingAssessment
 
+import models
+from database import init_db
+
 load_dotenv()
 
 app = FastAPI()
+
+engine = init_db()
 
 # ✅ CORS 설정
 origins = [
@@ -62,6 +67,10 @@ app.add_middleware(
     secret_key=os.getenv("SESSION_SECRET_KEY", "super-secret-key"),  # 랜덤 문자열로 교체
     max_age=1800,  # 30분
 )
+
+# 모든 테이블 자동 생성
+models.Base.metadata.create_all(bind=engine)
+print("테이블 생성 완료")
 
 # ✅ 라우터 통합
 app.include_router(auth_router)
