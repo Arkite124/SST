@@ -1,33 +1,39 @@
-import { Link } from "react-router-dom";
-import bgImg from "../../assets/bgImg.png";
-import useAuthLoad from "@/hooks/useAuthLoad.jsx"; // 첨부한 세로형 지도 이미지 사용
+import { useRef } from "react";
+import useAuthLoad from "@/hooks/useAuthLoad.jsx";
+import Section1 from "@/pages/Main/section/Section1.jsx";
+import Section2 from "@/pages/Main/section/Section2.jsx";
 
 function MainPage() {
-    useAuthLoad()
+    useAuthLoad();
+
+    // 각 섹션의 ref 생성
+    const sectionRefs = [useRef(null), useRef(null)];
+
+    const scrollToSection = (index) => {
+        sectionRefs[index].current?.scrollIntoView({ behavior: "smooth" });
+    };
+
     return (
-        <div className="w-full snap-y snap-mandatory overflow-x-hidden">
-        {/* Hero Section */}
-            <section
-                className="text-center bg-[#7b9c40]/70 backdrop-blur-md shadow-inner snap-start
-             flex flex-col items-center justify-center w-full
-             bg-repeat-y bg-[length:auto] bg-center"
-                style={{
-                    width: "100%",
-                    height: "calc(100vh - 5rem)",
-                    backgroundImage: `url(${bgImg})`,
-                }}
-            >
-            </section>
-            <section
-                style={{
-                    height: 'calc(100vh - 5rem - 120px)',
-                }}>
-                <div className="flex flex-col items-center">
-                    <p className="text-lg md:text-xl font-main text-textsub">
-                        아동·청소년 어휘력 증진을 위한 인공지능 학습 플랫폼
-                    </p>
-                </div>
-            </section>
+        <div className="w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto">
+            {/* 섹션들 */}
+            <div ref={sectionRefs[0]} className="snap-start">
+                <Section1 />
+            </div>
+            <div ref={sectionRefs[1]} className="snap-start">
+                <Section2 />
+            </div>
+
+            {/* 닷 포인트 네비게이션 */}
+            <div className="fixed top-1/2 right-6 transform -translate-y-1/2 flex flex-col space-y-4 z-50">
+                <button
+                    className="w-3 h-3 rounded-full bg-gray-200 hover:bg-[#4E944F]"
+                    onClick={() => scrollToSection(0)}
+                />
+                <button
+                    className="w-3 h-3 rounded-full bg-gray-200 hover:bg-[#4E944F]"
+                    onClick={() => scrollToSection(1)}
+                />
+            </div>
         </div>
     );
 }
