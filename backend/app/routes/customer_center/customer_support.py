@@ -288,7 +288,7 @@ async def customer_support_my_list(
 ### 주요 기능
 - 부모글 조회
 - 해당 parent_id를 가진 모든 답변 목록 조회
-- 오래된 순으로 정렬
+- 최신 순으로 정렬
 """
 )
 async def customer_support_my_detail(
@@ -312,7 +312,7 @@ async def customer_support_my_detail(
     answers = (
         db.query(CustomerSupport)
         .filter(CustomerSupport.parent_id == question_id)
-        .order_by(CustomerSupport.created_at.asc())
+        .order_by(CustomerSupport.created_at.desc())
         .all()
     )
 

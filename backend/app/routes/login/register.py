@@ -11,7 +11,7 @@ from data.postgresDB import SessionLocal
 from app.routes.edit_user.edit_user import UserRead
 
 load_dotenv()  # .env 파일 자동 로드
-router = APIRouter(prefix="/auth", tags=["register"])   # ✅ 모듈별 라우터
+router = APIRouter(prefix="/auth/register", tags=["register"])   # ✅ 모듈별 라우터
 
 def get_db():
     db = SessionLocal()
@@ -31,6 +31,7 @@ class UserRegister(BaseModel):
     gender: Optional[str] = None
     phone: Optional[str] = None
     oauth: Optional[str] = None
+    key_parent: Optional[str] = None
     email: str
 
     class Config:
@@ -42,7 +43,7 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 @router.post(
-    "/register",
+    "",
     response_model=UserRead,
     summary="회원가입",
     description="""
@@ -70,10 +71,11 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
-
+    if data.age < 0 :
+        raise HTTPException(status_code=400, detail="나이는 음수가 될 수 없습니다.")
     # ✅ 비밀번호 해시
     hashed_pw = hash_password(data.password)
-
+    hashed_parent_key = hash_password(data.key_parent)
     user = User(
         email=data.email,
         name=data.name,
@@ -82,6 +84,7 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
         phone=data.phone,
         gender=data.gender,
         age=data.age,
+        key_parent=hashed_parent_key,
     )
     db.add(user)
     db.commit()

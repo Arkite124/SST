@@ -193,7 +193,7 @@ def subscription_detail(
 - 첫 구독 시작일(start_date), 종료일(end_date) 자동 설정 (30일 기준)
 - 기본 상태(status)는 `authorized`
 
-### Request Body 예시
+### Request Body 예시(authKey가 billingKey로 들어가게 해놓음)
 ```json
 {
   "billingKey": "billing_xxxx",

@@ -8,11 +8,12 @@ from models import Users as User, Users
 from data.postgresDB import SessionLocal
 from typing import Optional
 from pydantic import BaseModel
+from passlib.context import CryptContext
 
 load_dotenv()  # .env 파일 자동 로드
 # 유저 정보
 router = APIRouter()
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def get_db():
     db = SessionLocal()
     try:
@@ -84,7 +85,7 @@ def patch_info(
     if not current_user:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
-    # 다시 조회해서 현재 DB에 있는 User 객체 얻기
+    # DB에서 유저 다시 조회
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -92,13 +93,18 @@ def patch_info(
     update_data = data.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
-        setattr(user, key, value)
+
+        # 🔥 key_parent가 수정되었다면 → 암호화 후 저장
+        if key == "key_parent" and value is not None and value != "":
+            hashed_value = pwd_context.hash(value)
+            setattr(user, key, hashed_value)
+        else:
+            setattr(user, key, value)
 
     db.commit()
     db.refresh(user)
 
     return user
-
 # ---------------------------
 # ✅ 회원 탈퇴
 # ---------------------------

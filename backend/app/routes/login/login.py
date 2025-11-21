@@ -1,4 +1,6 @@
-from models import Users as User
+from typing import Optional
+
+from models import Users as User, Users
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from fastapi import Cookie, Depends, HTTPException, APIRouter,status,Request
@@ -20,14 +22,14 @@ class LoginSchema(BaseModel):
 SECRET_KEY=os.environ.get("SECRET_KEY")
 REFRESH_SECRET_KEY=os.environ.get("REFRESH_SECRET_KEY")
 
-def create_access_token(user_id: int, expires_delta: int = 60):
-    expire = datetime.now() + timedelta(minutes=expires_delta)
-    payload = {"sub": int(user_id), "exp": expire}
+def create_access_token(user_id: int, expires_minutes: int = 60):
+    expire = datetime.now() + timedelta(minutes=expires_minutes)
+    payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(user_id: int, expires_days: int = 7):
     expire = datetime.now() + timedelta(days=expires_days)
-    payload = {"sub": int(user_id), "exp": expire, "type": "refresh"}
+    payload = {"sub": str(user_id), "exp": expire, "type": "refresh"}
     return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
 
 def get_db():
@@ -49,7 +51,7 @@ def get_current_user(access_token: str = Cookie(None), db: Session = Depends(get
         return None
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
+        user_id = int(payload.get("sub"))
     except JWTError:
         return None
     except Exception:
@@ -125,7 +127,7 @@ def login(data: LoginSchema, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="이메일이나 비밀번호가 틀렸습니다.")
 
     # JWT 발급 - 10/01 추가 refresh_token 추가
-    access_token = create_access_token(user.id, expires_delta=60)   # 1시간짜리
+    access_token = create_access_token(user.id, expires_minutes=60)   # 1시간짜리
     refresh_token = create_refresh_token(user.id, expires_days=7)  # 7일짜리
     response = JSONResponse({"access_token": "JWT암호화","토큰 형식":"bearer"})
     response.set_cookie(
@@ -180,11 +182,74 @@ def refresh_tokens(refresh_token: str = Cookie(None), db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="User not found")
 
     # 새 access token 발급
-    new_access_token = create_access_token(user.id, expires_delta=60)
+    new_access_token = create_access_token(user.id, expires_minutes=60)
     response = JSONResponse({"msg": "Token refreshed"})
     response.set_cookie("access_token", new_access_token, httponly=True, max_age=900)
     return response
 
+class AdditionalInfo(BaseModel):
+    token: str
+    nickname: str
+    age: int
+    gender: str
+    phone: str
+    key_parent: Optional[str] = None
+
+@router.post("/social")
+async def save_additional_info(data: AdditionalInfo, db: Session = Depends(get_db)):
+    """
+    소셜로그인 최초 등록시 추가정보를 입력받아 저장하는 엔드포인트 입니다.
+    """
+    payload = jwt.decode(data.token, SECRET_KEY, algorithms=["HS256"])
+    if payload.get("type") != "social_signup":
+        raise HTTPException(400, "유효하지 않은 접근입니다.")
+
+    user_id = payload["user_id"]
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "유저를 찾을 수 없습니다.")
+
+    # 2) 이미 정보가 있으면 중복 방지
+    if user.nickname:
+        raise HTTPException(status_code=400, detail="추가정보가 이미 등록된 사용자입니다.")
+    if data.age < 0 :
+        raise HTTPException(status_code=400, detail="나이는 음수가 될 수 없습니다.")
+    # 3) 정보 업데이트
+    user.nickname = data.nickname
+    user.age = data.age
+    user.gender = data.gender
+    user.phone = data.phone
+    user.updated_at = datetime.now()
+    # ⭐ key_parent가 있으면 bcrypt로 암호화 후 저장
+    if data.key_parent:
+        user.key_parent = pwd_context.hash(data.key_parent)
+
+    db.commit()
+    db.refresh(user)
+
+    # 4) JWT 발급해서 자동 로그인 상태 만들기
+    access_token = create_access_token(user.id, expires_minutes=60)
+    refresh_token = create_refresh_token(user.id, expires_days=7)
+
+    response = JSONResponse({"message": "추가정보 저장 완료", "user_id": user.id})
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=3600
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=3600*24*7
+    )
+
+    return response
 @router.post(
     "/logout",
     summary="로그아웃",

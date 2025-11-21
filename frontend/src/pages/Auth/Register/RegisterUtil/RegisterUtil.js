@@ -1,11 +1,6 @@
 import axiosInstance from "@/utils/axiosInstance.js";
 const url="/check/duplicate"
-export function CheckUserName(userName) {
-    return  axiosInstance.post(`${url}/check-userName`, {
-        userName
-    },{
-            headers: {"Content-Type": "application/json"}
-        });}
+
 //ID 중복 체크 완료
 export function CheckUserNickname(userNickname){
     return axiosInstance.get(

@@ -65,11 +65,10 @@ class ParentLoginSchema(BaseModel):
 ### Request Body 예시
 ```json
 {
-  "parent_key": "abcd1234"
-}
+  "parent_key": "abcd1234" -> 해시화된 암호값으로 감
+}```
 Response 예시
-json
-코드 복사
+```json
 {
   "parent_token": "jwt.token.value",
   "token_type": "bearer",
@@ -129,11 +128,10 @@ def parent_login(
     "email": "mom@example.com",
     "role": "parent"
   }
-}
+}```
 로그인 안됨:
 
-json
-코드 복사
+```json
 {
   "role": null
 }

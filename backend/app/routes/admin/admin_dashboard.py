@@ -30,7 +30,32 @@ def get_current_admin(current_user: Users = Depends(get_current_user)):
 # ───────────────────────────────
 # 1️⃣ 유저 차트: 신규가입 / 밴 / 소셜로그인 분포
 # ───────────────────────────────
-@router.get("/users/chart")
+@router.get(
+    "/users/chart",
+    summary="유저 차트 — 신규가입 / 밴 / 소셜로그인 통계",
+    description="""
+최근 1개월 동안의 사용자 관련 통계 데이터를 제공합니다.
+
+### 제공 데이터
+- **new_users**: 일별 신규 가입자 수
+- **banned_users**: 일별 밴된 사용자 수
+- **social_logins**: 소셜 로그인(oauth) 분포
+
+### Response Example
+```json
+{
+  "new_users": [
+    { "date": "2025-01-01", "count": 3 }
+  ],
+  "banned_users": [
+    { "date": "2025-01-02", "count": 1 }
+  ],
+  "social_logins": [
+    { "type": "google", "count": 12 }
+  ]
+}
+"""
+)
 def get_user_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
@@ -38,6 +63,8 @@ def get_user_chart(
     """
     최근 1개월간 유저 관련 추이 (신규 가입자 수, 밴 수)
     """
+    if not current_admin:
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
     new_users = (
         db.query(
             func.date_trunc("day", Users.created_at).label("date"),
@@ -77,7 +104,33 @@ def get_user_chart(
 # ───────────────────────────────
 # 2️⃣ 구독 차트: 플랜별 매출 / 신규 구독자 수
 # ───────────────────────────────
-@router.get("/subscriptions/chart")
+@router.get(
+    "/subscriptions/chart",
+    summary="구독 차트 — 플랜별 매출 및 구독자 추이",
+    description="""
+최근 1개월 동안의 **구독 정보**를 분석합니다.
+
+### 제공 데이터
+- 일별 플랜별 신규 구독자 수
+- 일별 플랜별 매출액
+- Pie Chart용 플랜별 총 매출
+
+### Response Example
+```json
+{
+  "daily": {
+    "2025-01-01": {
+      "BASIC": { "subs": 3, "revenue": 15000 },
+      "PRO": { "subs": 1, "revenue": 10000 }
+    }
+  },
+  "plan_totals": [
+    { "plan": "BASIC", "revenue": 123000 },
+    { "plan": "PRO", "revenue": 52000 }
+  ]
+}
+"""
+)
 def get_subscription_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
@@ -85,6 +138,8 @@ def get_subscription_chart(
     """
     최근 1개월간 플랜별 일별 매출 및 구독자 수
     """
+    if not current_admin:
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
     data = (
         db.query(
             func.date_trunc("day", Subscriptions.start_date).label("date"),
@@ -122,7 +177,34 @@ def get_subscription_chart(
 # ───────────────────────────────
 # 3️⃣ 학습 활동 차트: 테스트 평균 / 게임 횟수
 # ───────────────────────────────
-@router.get("/learning/chart")
+@router.get(
+    "/learning/chart",
+    summary="학습 활동 차트 — 테스트 점수 및 게임 횟수",
+    description="""
+최근 1개월 동안의 학습 활동 데이터를 제공합니다.
+
+### 제공 데이터
+#### tests
+- test_type별 일별 평균 점수
+- test_type별 일별 응시 횟수
+
+#### games
+- game_type별 일별 플레이 횟수
+
+### Response Example
+```json
+{
+  "tests": {
+    "2025-01-01": {
+      "vocabulary": { "avg_score": 83.5, "count": 12 }
+    }
+  },
+  "games": {
+    "2025-01-01": { "word_chain": 8 }
+  }
+}
+"""
+)
 def get_learning_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
@@ -130,6 +212,8 @@ def get_learning_chart(
     """
     최근 1개월간 테스트 점수 및 게임 횟수 추이
     """
+    if not current_admin:
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
     test_data = (
         db.query(
             func.date_trunc("day", UserTests.taken_at).label("date"),
@@ -178,7 +262,28 @@ def get_learning_chart(
 # ───────────────────────────────
 # 4️⃣ 콘텐츠 차트: 일일 글/독서/기분 합계
 # ───────────────────────────────
-@router.get("/contents/chart")
+@router.get(
+    "/contents/chart",
+    summary="콘텐츠 차트 — 글쓰기/독서/기분(1개월)",
+    description="""
+최근 1개월 동안의 콘텐츠 활동 데이터를 제공합니다.
+
+### 제공 데이터
+- **writing_count**: 일별 글쓰기 작성 수  
+- **avg_mood**: 일별 평균 mood  
+- **reading_count**: 일별 독서 기록 수  
+
+### Response Example
+```json
+{
+  "2025-01-01": {
+    "writing_count": 4,
+    "avg_mood": 3.25,
+    "reading_count": 2
+  }
+}
+"""
+)
 def get_content_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
@@ -186,6 +291,8 @@ def get_content_chart(
     """
     최근 1개월간 일별 글쓰기, 독서록 수 및 기분 평균
     """
+    if not current_admin:
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
     writings = (
         db.query(
             func.date_trunc("day", DailyWritings.created_at).label("date"),
@@ -228,7 +335,30 @@ def get_content_chart(
 # ───────────────────────────────
 # 5️⃣ 고객센터 차트: 문의 카테고리/상태 분포
 # ───────────────────────────────
-@router.get("/support/chart")
+@router.get(
+    "/support/chart",
+    summary="고객센터 차트 — 문의 카테고리/상태 분포",
+    description="""
+최근 1개월간 고객센터 문의 데이터를 분석합니다.
+
+### 제공 데이터
+- **by_category**: category별 문의 수  
+  - 예: system, payment, public, private  
+- **by_status**: status별 문의 수  
+  - 예: open, answered, pending  
+
+### Response Example
+```json
+{
+  "by_category": [
+    { "category": "system", "count": 5 }
+  ],
+  "by_status": [
+    { "status": "open", "count": 3 }
+  ]
+}
+"""
+)
 def get_support_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
@@ -236,6 +366,8 @@ def get_support_chart(
     """
     최근 1개월간 고객센터 문의 상태 / 카테고리 분포
     """
+    if not current_admin:
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
     category_data = (
         db.query(CustomerSupport.category, func.count(CustomerSupport.id))
         .filter(CustomerSupport.created_at >= func.now() - text("interval '1 month'"))

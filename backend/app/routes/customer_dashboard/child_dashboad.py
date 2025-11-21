@@ -27,7 +27,7 @@ router = APIRouter(prefix="/child/dashboard", tags=["Child Dashboard"])
 - exp: 경험치
 - profile_img_url: 프로필 이미지 URL
 
-### Response Example
+### 응답 예시
 ```json
 {
   "nickname": "새싹이",
@@ -62,7 +62,7 @@ def get_child_profile(
 - diary_count: 작성한 글 개수
 - avg_mood: 평균 기분 점수
 
-### Response Example
+### 응답 예시
 ```json
 {
   "diary_count": 12,
@@ -99,7 +99,7 @@ def get_writing_stats(
     description="""
 최근 1개월 동안 자녀가 기록한 **독서 횟수(ReadingLogs)** 를 집계합니다.
 
-### Response Example
+### 응답 예시
 ```json
 {
   "reading_count": 8
@@ -128,7 +128,7 @@ def get_reading_stats(
 최근 1개월 동안 자녀가 사용한 단어 목록 중  
 **가장 많이 사용한 단어 10개**를 집계합니다.
 
-### Response Example
+### 응답 예시
 ```json
 {
   "top_words": [
@@ -168,7 +168,7 @@ def get_word_usage(
 최근 1개월 동안 자녀가 플레이한 게임들의  
 **게임 유형별 평균 점수**를 조회합니다.
 
-### Response Example
+### 응답 예시
 ```json
 {
   "avg_scores": {
@@ -209,7 +209,7 @@ def get_game_stats(
 - reading
 - sentence
 
-### Response Example
+### 응답 예시
 ```json
 {
   "avg_scores": {

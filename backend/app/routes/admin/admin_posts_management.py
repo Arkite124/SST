@@ -91,7 +91,7 @@ class AdminPostItem(BaseModel):
 - category 필드로 게시물 출처 구분
 - 최신순(created_at DESC) 정렬 후 반환
 
-### Response 예시
+### 응답 예시
 ```json
 [
   {

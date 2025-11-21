@@ -53,6 +53,7 @@ import ProtectedProfileRoute from "./pages/MyPage/ProfileEdit/ProtectedProfileRo
 import ProfilePwConfirm from "./pages/MyPage/ProfileEdit/ProfilePwConfirm";
 import UserBanManager from "./pages/Admin/UserBanManager";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
+import Social from "@/pages/Auth/Register/Social.jsx";
 
 function App() {
     return (
@@ -122,6 +123,7 @@ function App() {
                         {/* 로그인 */}
                         <Route path="login" element={<LoginPage />} />
                         <Route path="register" element={<RegisterPage />} />
+                        <Route path="social" element={<Social />} /> {/*소셜 로그인 최초 정보 입력*/}
                         <Route path="find-account" element={<FindAccountPage />} />
                         <Route path="withdraw" element={<WithdrawPage />} />
                         <Route path="/auth/register" element={<RegisterPage />} />

@@ -67,10 +67,9 @@ class ParentLoginSchema(BaseModel):
 ```json
 {
   "parent_key": "1234abcd"
-}
+}           ```
 Response 예시
-json
-코드 복사
+```json
 {
   "parent_token": "jwt.token.value",
   "token_type": "bearer",
