@@ -17,6 +17,7 @@ import WordSearchPage from "./pages/Activity/WordSearch/WordSearchPage";
 // 커뮤니티
 import CommunityPage from "./pages/Community/CommunityPage";
 import StudentDiscussionPage from "./pages/Community/StudentDiscussion/StudentDiscussionPage";
+import StudentDiscussionDetailPage from "./pages/Community/StudentDiscussion/StudentDiscussionDetailPage";
 import ParentBoardPage from "./pages/Community/ParentBoard/ParentBoardPage";
 
 // 테스트
@@ -76,7 +77,10 @@ function App() {
                         {/* 커뮤니티 */}
                         <Route path="community" element={<CommunityPage />}>
                             <Route index element={<StudentDiscussionPage />} />
+                            {/*학생 커뮤니티 목록 페이지*/}
                             <Route path="student-discussion" element={<StudentDiscussionPage />} />
+                            {/*학생 커뮤니티 상세페이지*/}
+                            <Route path="student-discussion/:id" element={<StudentDiscussionDetailPage />} />
                             <Route path="parent-board" element={<ParentBoardPage />} />
                         </Route>
 
