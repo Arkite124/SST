@@ -75,6 +75,7 @@ html.no-scrollbar {
     }
 }
 
+/* 메인화면 구름 애니메이션 */
 @keyframes float-cloud {
     0% {
         transform: translateY(0);
@@ -87,6 +88,7 @@ html.no-scrollbar {
     }
 }
 
+/* 메인화면 구름 애니메이션 */
 .cloud-animation {
     animation:
             slide-fwd-left 0.45s cubic-bezier(.215,.61,.355,1.000) .2s both,
