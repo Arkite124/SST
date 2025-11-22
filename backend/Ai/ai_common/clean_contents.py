@@ -10,3 +10,4 @@ def safe_spell_check(text: str) -> str:
         return result.checked
     except Exception:
         return spaced_sentence
+

@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: kdt_db
+    restart: always
+    environment:
+      POSTGRES_USER: dodam
+      POSTGRES_PASSWORD: dodam124
+      POSTGRES_DB: kdt_db
+    ports:
+      - "5432:5432"
+    networks:
+      - kdt_network
+
+  fastapi:
+    build:
+      context: ./   # Dockerfile 있는 루트 기준
+      dockerfile: Dockerfile
+    container_name: fastapi-api
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+    networks:
+      - kdt_network
+
+networks:
+  kdt_network:
+    driver: bridge

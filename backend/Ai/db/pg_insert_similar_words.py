@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
@@ -16,6 +18,9 @@ def to_list(s):
 
 df['similar_words'] = df['similar_words'].apply(to_list)
 
+# DB_USER = os.getenv("POSTGRES_USER")
+# DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+# DB_NAME = os.getenv("POSTGRES_DB")
 
 # PostgreSQL 연결
 conn = psycopg2.connect(

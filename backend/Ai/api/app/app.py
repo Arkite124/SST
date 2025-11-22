@@ -5,15 +5,15 @@ from sentence_transformers import SentenceTransformer
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 sys.path.append(PROJECT_ROOT)
 
-from backend.Ai.ai_words_logic.word_similarity import load_model_and_corpus
-from backend.Ai.api.ai_models.analyze_sentence_api import get_sentence_router
-from backend.Ai.api.ai_models.book_recommend_api import get_book_router
-from backend.Ai.api.ai_models.analyze_only_api import router as analyze_router
-from backend.Ai.api.ai_models.clean_content_api import router as clean_content_router
-from backend.Ai.api.ai_models.analyze_sentiment_api import get_sentiment_router
+from ai_words_logic.word_similarity import load_model_and_corpus
+from api.ai_routers.analyze_sentence_api import get_sentence_router
+from api.ai_routers.book_recommend_api import get_book_router
+from api.ai_routers.analyze_only_api import router as analyze_router
+from api.ai_routers.clean_content_api import router as clean_content_router
+from api.ai_routers.analyze_sentiment_api import get_sentiment_router
 
 app = FastAPI(title="Sentence ML API")
 

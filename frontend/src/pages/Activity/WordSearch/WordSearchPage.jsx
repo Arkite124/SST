@@ -45,7 +45,7 @@ export default function WordSearchPage() {
     };
 
     return (
-        <div className="p-6 h-[100%] bg-[#E9EFC0] rounded-2xl shadow-inner">
+        <div className="p-6 bg-[#E9EFC0] rounded-2xl shadow-inner max-h-[60vh] overflow-y-auto transition-all duration-200">
             <h2 className="text-2xl font-normal text-[#4E944F] mb-5 flex items-center font-juache">
                 어휘 검색
             </h2>

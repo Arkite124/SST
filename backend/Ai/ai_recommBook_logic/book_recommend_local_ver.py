@@ -3,8 +3,9 @@ import re
 import torch
 import requests
 from sentence_transformers import SentenceTransformer
-from backend.Ai.ai_common.gpu_start import get_device_cuda
-from backend.Ai.db.pg_connect import get_book_titles  # sentiment 포함해서 가져오기
+
+from ai_common.gpu_start import get_device_cuda
+from db.pg_connect import get_book_titles# sentiment 포함해서 가져오기
 
 # ---------------------------
 # 환경 변수 / 설정
@@ -12,13 +13,13 @@ from backend.Ai.db.pg_connect import get_book_titles  # sentiment 포함해서 �
 device = get_device_cuda()
 model_name = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"
 MODEL = SentenceTransformer(model_name, device=device)
-EMBEDDING_PATH = "../data/book_embeddings_naver.pt"
+EMBEDDING_PATH = "/data/book_embeddings_naver.pt"
 CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 NAVER_URL = "https://openapi.naver.com/v1/search/book.json"
 
 # ---------------------------
-# 네이버 API에서 책 정보 가져오기
+# 네이버 API에서 책 정보(1건) 가져오기 - 벡터정보에 없을 시 보완
 # ---------------------------
 def fetch_book_from_naver(title):
     headers = {"X-Naver-Client-Id": CLIENT_ID, "X-Naver-Client-Secret": CLIENT_SECRET}
