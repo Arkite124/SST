@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.routes.login.login import verify_password
 from app.routes.login.register import hash_password
@@ -19,6 +20,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
 class UserRead(BaseModel):
     id: int
     nickname: str
@@ -37,6 +39,9 @@ class UserUpdate(BaseModel):
 
 @router.post("/check-email")
 async def check_duplicate_email(request: Request, db: Session = Depends(get_db)):
+    """
+    이메일 중복확인 엔드포인트
+    """
     data = await request.json()
     email = data.get("email")
 
@@ -50,15 +55,30 @@ async def check_duplicate_email(request: Request, db: Session = Depends(get_db))
         return {"checkEmail": False, "message": "회원가입이 소셜로그인으로 되어 있습니다."}
     return {"checkEmail": False, "message": "이 이메일은 이미 존재합니다."}
 
-@router.get("/{nickname}", response_model=Any)
-def check_duplicate_nickname(nickname:str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.nickname == nickname).first()
-    if not user:
-        return {"checkNick":True,"nickMessage": "회원가입이 가능한 닉네임입니다."}
-    return {"checkNick":False,"nickMessage": "이 닉네임은 이미 존재합니다. 다른 닉네임을 사용해주세요."}
+
+@router.get("/check-nickname", response_model=Any)
+def check_duplicate_nickname(userNickname: str, db: Session = Depends(get_db)):
+    """
+    닉네임 중복확인 엔드포인트 (대소문자 무시)
+    """
+    user = db.query(User).filter(func.lower(User.nickname) == userNickname.lower()).first()
+    if user:
+        return {
+            "checkNick": False,
+            "nickMessage": "이 닉네임은 이미 존재합니다. 다른 닉네임을 사용해주세요."
+        }
+
+    return {
+        "checkNick": True,
+        "nickMessage": "회원가입이 가능한 닉네임입니다."
+    }
+
 
 @router.post("/check-phone")
 async def check_duplicate_phone(request: Request, db: Session = Depends(get_db)):
+    """
+    핸드폰 번호 중복확인 엔드포인트
+    """
     data = await request.json()
     phone = data.get("phone")
 

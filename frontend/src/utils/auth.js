@@ -6,6 +6,11 @@ export const register = async (userData) => {
     const response = await axiosInstance.post("/auth/register", userData);
     return response.data;
 };
+// 소셜회원가입, 최초 로그인시
+export const socialRegister = async (userData) => {
+    const response = await axiosInstance.post("/auth/social", userData);
+    return response.data;
+};
 
 // 로그인
 export const login = async (loginData) => {

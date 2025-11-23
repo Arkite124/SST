@@ -49,7 +49,33 @@ class ParentLoginSchema(BaseModel):
 # ✅ 부모 로그인
 # ✅ 부모 로그인 (자녀 계정 로그인 상태 필요)
 
-@router.post("/login")
+@router.post(
+    "/login",
+    summary="부모 로그인 (Parent Key 인증)",
+    description="""
+자녀 계정에 저장된 `parent_key` 를 이용해 부모로 로그인합니다.  
+로그인 성공 시 `parent_token` 이라는 별도 JWT 쿠키를 발급합니다.
+
+### 주요 기능
+- 반드시 **자녀 계정이 로그인된 상태**여야 함 (`get_current_user`)
+- parent_key는 bcrypt로 저장되어 있으며 검증 필요
+- parent_token은 **HTTP-Only 쿠키**로 발급됨 (XSS 방지)
+- 토큰에는 `"parent": true` 포함 → 부모 권한 인증 용도
+
+### Request Body 예시
+```json
+{
+  "parent_key": "abcd1234" -> 해시화된 암호값으로 감
+}```
+Response 예시
+```json
+{
+  "parent_token": "jwt.token.value",
+  "token_type": "bearer",
+  "user_id": 5
+}
+"""
+)
 def parent_login(
     payload: ParentLoginSchema,
     current_user: Users = Depends(get_current_user),   # ✅ 여기서 주입받음
@@ -81,7 +107,36 @@ def parent_login(
     }
 
 
-@router.get("/me")
+@router.get(
+    "/me",
+    summary="현재 부모 로그인 상태 조회",
+    description="""
+부모 대시보드 전용 토큰(`parent_token`)이 유효한지 확인하고  
+현재 부모 권한으로 로그인 중인지 조회합니다.
+
+### 주요 기능
+- parent_token이 없거나 만료 → `{ "role": null }` 반환
+- parent_token 유효 → 부모 정보 반환
+
+### Response 예시
+성공:
+```json
+{
+  "parent": {
+    "parent_id": 3,
+    "nickname": "엄마",
+    "email": "mom@example.com",
+    "role": "parent"
+  }
+}```
+로그인 안됨:
+
+```json
+{
+  "role": null
+}
+"""
+)
 def get_parent_me(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("parent_token")
     # 토큰이 없으면 null 반환
@@ -107,7 +162,23 @@ def get_parent_me(request: Request, db: Session = Depends(get_db)):
     except JWTError:
         return {"role": None}
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="부모 로그아웃",
+    description="""
+부모 전용 토큰(`parent_token`)을 삭제하여 부모 대시보드 인증을 종료합니다.
+
+### 주요 기능
+- parent_token을 빈 값 + `max_age=0` 으로 설정해 즉시 만료
+- Body는 간단한 메시지만 반환
+
+### Response 예시
+```json
+{
+  "message": "로그아웃 성공"
+}
+"""
+)
 def logout():
     response = JSONResponse({"message": "로그아웃 성공"})
     response.set_cookie("parent_token", "", httponly=True, max_age=0)

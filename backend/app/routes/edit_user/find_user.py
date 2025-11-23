@@ -40,6 +40,9 @@ class UserUpdate(BaseModel):
 
 @router.get("/{phone}", response_model=UserRead)
 def find_user(phone: str, db: Session = Depends(get_db)):
+    """
+    유저 이메일 찾는 라우터(핸드폰 번호 기반)
+    """
     user = db.query(Users).filter(Users.phone == phone).first()
     if not user or user.phone is None:
         raise HTTPException(status_code=200, detail="해당 번호를 가진 유저를 찾지 못했습니다.")
@@ -68,6 +71,9 @@ aws_url=os.getenv("AWS_URL")
 # 1. 비밀번호 재설정 요청
 @router.post("/pw_reset/request")
 def request_password_reset(data: PasswordResetRequest, db: Session = Depends(get_db)):
+    """
+    비밀번호 재설정 요청
+    """
     user = db.query(Users).filter(Users.email == data.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -110,6 +116,9 @@ def send_email(to_email: str, subject: str, body: str):
 # 2. 비밀번호 재설정 완료
 @router.post("/pw_reset/confirm")
 def confirm_password_reset(data: PasswordResetConfirm, db: Session = Depends(get_db)):
+    """
+    비밀번호 재설정 확인
+    """
     try:
         payload = jwt.decode(data.token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
