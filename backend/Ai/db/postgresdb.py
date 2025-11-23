@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()  # .env 파일 자동 로드
+load_dotenv()  # ..env 파일 자동 로드
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base

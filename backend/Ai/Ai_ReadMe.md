@@ -1,112 +1,121 @@
-# AI Word Analysis Module
+#  AI Word Analysis & Recommendation Module
 
-이 프로젝트는 **사용자 작성 글을 정제 및 단어 분석**하고,  
-**유사 단어 추천**, **사전적 정의 매칭**, **DB 저장**, **책 추천** 등을 수행하는 AI 모듈입니다.
+이 프로젝트는 **사용자 작성 글을 정제하고 단어를 분석**하며,  
+**유사 단어 추천**, **사전적 정의 매칭**, **DB 저장**, **도서 추천** 등을 수행하는 AI 모듈입니다.
 
 ---
 
 ## 프로젝트 구조
+
 ```
 Ai/
 ├── ai_common                      # AI 공통 유틸리티 및 환경 설정
-│   ├── __init__.py
-│   └── gpu_start.py               # GPU(CUDA) 초기화 및 디바이스 설정
+│   ├── gpu_start.py               # GPU(CUDA) 초기화 및 디바이스 설정
+│
 ├── ai_recommBook_logic            # 도서 추천 관련 로직
-│   ├── __init__.py
-│   ├── book_recommend.py          # SBERT 기반 도서 임베딩/추천
+│   ├── book_recommend.py          # SBERT 기반 도서 임베딩 및 추천
 │   └── save_embbading_book.py     # 도서 임베딩 저장 처리
+│
 ├── ai_words_logic                 # 문장 분석 및 단어 의미 연산 관련 모듈
-│   ├── __init__.py
 │   ├── clean_contents.py          # 맞춤법 교정 및 텍스트 정제
-│   ├── main.py                    # 단어 분석 결과 확인용 메인 로직 (entry point)
+│   ├── main.py                    # 단어 분석 결과 실행용 entry point
 │   ├── word_analysis.py           # 단어별 빈도, 품사별 카운트 등 분석
 │   ├── word_dictionary.py         # 사전 정의 기반 의미 추출
-│   └── word_similarity.py         # 문맥 기반 유사 단어 계산
+│   └── word_similarity.py         # 문맥 기반 유사 단어 계산 및 모델 학습
+│
 ├── api
-│   ├── __init__.py
-│   ├── ai_models
-│   │   ├── __init__.py
-│   │   ├── book_api.py            # 도서 추천 api
-│   │   ├── clean_content_api.py   # 문장 정제 api
-│   │   ├── output_api.py          # 문장 분석 결과 api
-│   │   └── sentence_model_api.py  # 유사어 매칭 및 사전적 정의 도출 api
-│   └── app
-│       ├── __init__.py
-│       └── main.py
-├── cuda_test.py                   # CUDA 환경 테스트 스크립트
+│   ├── ai_routers
+│   │   ├── book_api.py            # 도서 추천 API
+│   │   ├── clean_content_api.py   # 문장 정제 API
+│   │   ├── output_api.py          # 분석 결과 API
+│   │   └── sentence_model_api.py  # 유사어 매칭 및 정의 반환 API
+│   └── app/main.py                # FastAPI 서버 entry point
+│
 ├── data                           # 데이터 및 모델 저장소
-│   ├── book_embeddings_naver.pt   # 네이버 도서 api 임베딩 벡터 (PyTorch)
-│   ├── output_kids_words/         # 기준단어-유사 단어 학습 결과 저장 모델 디렉토리
-│   ├── similar_words.csv          # 유사단어 목록 메타데이터 CSV
-│   └── similar_words.pkl          # 유사단어 목록 피클 버전
+│   ├── book_embeddings_naver.pt   # 네이버 도서 임베딩 벡터
+│   ├── output_kids_words/         # 유사어 학습 결과 저장 모델
+│   ├── similar_words.csv          # 유사단어 목록 CSV
+│   └── similar_words.pkl          # 유사단어 목록 Pickle
+│
 └── db                             # 데이터베이스 관련 모듈
-    ├── __init__.py
-    ├── pg_connect.py              # PostgreSQL 직접 연결
-    ├── pg_insert_similar_words.py # CSV 기반 유사단어 DB 삽입 스크립트
-    └── postgresdb.py              # 세션 관리 + DB 초기화
-
-
-
+    ├── pg_connect.py              # PostgreSQL 연결
+    ├── pg_insert_similar_words.py # CSV 기반 DB 삽입
+    └── postgresdb.py              # 세션 관리 및 초기화
 ```
+
 ---
 
 ## 설치 가이드
 
-### CUDA 및 PyTorch 설치 (직접 설치 시)
-CUDA 관련 문제로 자동 설치가 곤란할 경우, 아래 명령어로 수동 설치합니다.
+### 필수 환경
+- Python 3.11
+- CUDA 지원 GPU (선택)
+- PostgreSQL
 
+### CUDA 및 PyTorch 수동 설치 예시
 ```bash
-python.exe -m pip install --upgrade pip
+python -m pip install --upgrade pip
 pip install torch==2.1.2+cu121 torchvision==0.16.2+cu121 torchaudio==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
-````
-### 필수 설치 항목
-항목	설명
 ```
-requirements.txt	모든 Python 의존성 패키지 포함
-```
+
+### 패키지 설치
 ```bash
 pip install -r requirements.txt
 ```
+
 ---
 
-## 실행 순서: 유사어 추천
+## AI 모델 구성
 
-### 선행 실행 코드
+| 구분 | 모델 / 데이터 | 설명 |
+|------|----------------|------|
+| **문장 임베딩** | [snunlp/KR-SBERT-V40K-klueNLI-augSTS](https://huggingface.co/snunlp/KR-SBERT-V40K-klueNLI-augSTS) | 서울대 NLP팀의 한국어 SBERT 모델. 한국어 NLI + STS 데이터로 학습되어 문장 의미 비교에 최적화. |
+| **감정 분석** | [alsgyu/sentiment-analysis-fine-tuned-model](https://huggingface.co/alsgyu/sentiment-analysis-fine-tuned-model) | 한국어 문장 감정 분류용 BERT 파인튜닝 모델 (긍정·부정·중립). |
+| **유사어 추천 모델** | **output_kids_words/** | `KR-SBERT-V40K-klueNLI-augSTS`를 기반으로 어린이 글쓰기 코퍼스에 맞춰 파인튜닝된 **SentenceTransformer 커스텀 임베딩 모델**. 단어 간 의미 유사도 학습용. |
 
-모델 실행 및 학습 전, 아래 스크립트를 실행하여 DB에 단어 데이터를 사전 삽입합니다.
+---
 
+## 실행 순서: 유사어 추천 기능
+
+### ① 데이터베이스 초기화
 ```bash
-python backend/Ai/db/pg_insert_similar_words.py
+python Ai/db/pg_insert_similar_words.py
 ```
-(※ .csv 파일 데이터를 데이터베이스에 적재합니다.)
 
-## 사용 요령
-
-### 글 정제
-
-입력된 원문 텍스트를 맞춤법 검사 및 정제합니다.
-
-python
-```
+### ② 텍스트 정제
+```python
 cleaned_text = safe_spell_check(original_text)
 ```
-### 단어 분석 (TTR, 빈도 등)
 
-python
-```
-analysis = extract_tokens(cleaned_text)  #글 분석 결과 리스트
-combined_counter = analysis['counter_nouns'] + analysis['counter_verbs']
+### ③ 단어 분석 (TTR, 빈도 등)
+```python
+analysis = extract_tokens(cleaned_text)
+top_words = analysis['counter_nouns'].most_common(5)
 ```
 
- 상위 N개 단어 가져오기
+### ④ 유사어 추천
+
+기준 단어(word_base)와 가장 유사한 단어를 상위 topk개 추출합니다.
+(현재는 3개)
+
+```python
+candidates = similar_fn("행복", topk=3)
 ```
-top_words = combined_counter.most_common(n)
-```
-counter_nouns: 명사 빈도
-counter_verbs: 동사 빈도
+counter_nouns: 명사 빈도 counter_verbs: 동사 빈도
 
 TTR (Type Token Ratio): 어휘 다양도 분석 포함
 
+### ⑤ 의미(사전적 정의) 추출
+
+단어가 존재하는 주어진 정제 문장(cleaned_text)과 단어(w)를 기반으로 가장 적합한 사전적 정의를 반환합니다.
+```python
+definition, score = get_best_definition(cleaned_text, "행복", model, threshold=0.25)
+```
+s_def: 사전적 정의
+
+s_score: 문장과의 유사도 점수
+
+---
 ### 단어 사용 기록 (DB 저장)
 분석된 단어를 UserWordUsage 테이블에 저장합니다.
 
@@ -121,25 +130,6 @@ for word, freq in combined_counter.items():
     )
     session.add(usage)
 ```
-### 유사 단어 추천
-
-기준 단어(word_base)와 가장 유사한 단어를 상위 topk개 추출합니다.
-(현재는 3개)
-```
-candidates = similar_fn(word_base, topk=3)
-```
-
-### 의미(사전적 정의) 추출
-
-주어진 정제 문장(cleaned_text)과 단어(w)를 기반으로 가장 적합한 사전적 정의를 반환합니다.
-
-python
-```
-s_def, s_score = get_best_definition(cleaned_text, w, model, threshold=0.25)
-```
-s_def: 사전적 정의
-
-s_score: 문장과의 유사도 점수
 
 ### 모델 로드 및 초기화
 
@@ -158,7 +148,17 @@ def ensure_similar_fn():
 
 similar_fn = ensure_similar_fn()
 ```
-## 구성 요약
+---
+
+## 주요 기능 요약
+
+| 기능 | 설명 |
+|------|------|
+| **텍스트 정제** | 맞춤법 교정 및 불필요한 기호 제거 |
+| **단어 분석** | 품사별 빈도, TTR(어휘 다양도) 계산 |
+| **DB 저장** | 사용자별 단어 사용 내역 저장 |
+| **유사어 추천** | 의미적으로 가까운 단어 추천 |
+| **사전 정의 매칭** | 문맥에 맞는 사전 정의 자동 선택 |
 
 ### 파일	역할
 
@@ -167,128 +167,78 @@ similar_fn = ensure_similar_fn()
 3. ai_common/gpu_start.py	GPU 장치 설정 및 모델 로드 관리
 4. ai_common/utils.py	텍스트 정제 및 전처리 유틸리티
 
-## 주요 기능 요약
-
-### 기능	설명
-```
- 텍스트 정제	맞춤법 교정 및 불필요한 기호 제거
- 단어 분석	품사별 빈도, TTR 계산
- DB 저장	사용자별 단어 사용 내역 기록
- 유사 단어 추천	의미적으로 가까운 단어 추천
- 사전 정의 매칭	문맥에 맞는 사전 정의 자동 선택
-```
-
 ---
 
-## 도서 추천 모듈 사용법
+## 도서 추천 모듈
 
-이 모듈은 사용자의 **독서 이력(읽은 책 제목/저자)** 을 기반으로  
-**줄거리 유사도(SBERT 임베딩)** 를 분석하여 **비슷한 도서를 추천**합니다.
-
----
+이 모듈은 사용자의 **독서 이력(책 제목/저자)**과 독서 감상문을 기반으로 **SBERT 문장 임베딩 유사도**를 분석하여 **비슷한 도서를 추천**합니다.
 
 ### 사전 준비
 
-도서 데이터셋을 임베딩하여 `.pt` 파일로 저장합니다.  
+도서 데이터셋을 임베딩하여 .pt 파일로 저장합니다.
 
 (해당 스크립트는 SBERT를 이용해 책의 줄거리 벡터를 생성합니다.)
-
 ```bash
-python backend/Ai/ai_recommBook_logic/save_embbading_book.py
+python Ai/ai_recommBook_logic/save_embbading_book.py
 ```
- 결과물: backend/Ai/data/book_embeddings.pt
-
- 참고 데이터: backend/Ai/data/kcisa_books.pkl
+> 결과물: `Ai/data/book_embeddings.pt`
 
 
-### 데이터베이스 준비
-추천 기능은 사용자 독서 기록을 기반으로 작동합니다.
-아래의 DB 테이블이 필요합니다.
+---
 
-테이블명	설명
-```
-reading_logs	사용자가 읽은 책 제목 및 저자 정보를 저장
-```
- get_book_titles(user_id) 함수는 이 테이블로부터 데이터를 조회합니다.
+### 데이터베이스 테이블 예시
+| 테이블명 | 설명 |
+|-----------|------|
+| `reading_logs` | 사용자가 읽은 책 제목 및 저자 정보 저장 |
 
-### 실행 방법
+---
+
+### 실행 예시
+
 아래 예시는 특정 유저의 독서 이력 기반 도서 추천 과정을 보여줍니다.
-
-python
-```
+```python
 import torch
 import pandas as pd
-from backend.Ai.db.pg_connect import get_book_titles
-from backend.Ai.ai_recommBook_logic.bookRecomm_sbert import recommend_books_auto_weight_with_precomputed
+from db.pg_connect import get_book_titles
+from ai_recommBook_logic.book_recommend import recommend_books_auto_weight_with_precomputed
 
-# 1. 유저의 독서 이력 불러오기
-read_titles = get_book_titles(user_id)  
-# → [(책제목, 저자), (책제목, 저자), ...]
-
-# 2. 사전 임베딩 및 도서 데이터 불러오기
+read_titles = get_book_titles(user_id)
 df = pd.read_pickle("backend/Ai/data/kcisa_books.pkl")
 embeddings = torch.load("backend/Ai/data/book_embeddings.pt", map_location=device)
 
-# 3. 도서 추천 실행
 recommended_books = recommend_books_auto_weight_with_precomputed(
     df, embeddings, read_titles, top_n=5
 )
 ```
-### 함수 설명
-```
-함수명	설명
-get_book_titles(user_id) : DB에서 특정 유저의 읽은 책 제목과 저자를 튜플 리스트 형태로 반환
-recommend_books_auto_weight_with_precomputed(df, embeddings, read_titles, top_n) : 입력된 책 리스트(read_titles)를 기반으로, 줄거리 임베딩 유사도를 계산하여 가장 비슷한 도서 top_n개 추천
-```
 
-### 주요 입력 파라미터
-```
-파라미터	설명
-df      	도서 메타데이터 (예: kcisa_books.pkl)
-embeddings	사전 학습된 책 임베딩 벡터 (예: book_embeddings.pt)
-read_titles	사용자가 읽은 책의 (제목, 저자) 튜플 리스트
-top_n	        추천할 도서 개수 (기본값: 5)
-```
-### read_titles 예시 반환
+---
 
-python
-```
-[
-  ("데미안", "헤르만 헤세"),
-  ("연을 쫓는 아이", "할레드 호세이니"),
-  ("나미야 잡화점의 기적", "히가시노 게이고"),
-  ("7년의 밤", "정유정"),
-  ("당신의 조각들", "김중혁")
-]
-```
+### 작동 원리
+1. `네이버 도서 api` → 전체 도서 데이터 로드  
+2. `book_embeddings.pt` → SBERT 임베딩 로드  
+3. 사용자 독서 이력(`reading_logs`)과 유사도 계산  
+4. 상위 `top_n` 유사 도서 반환  
 
-### 작동 원리 요약
+---
 
-kcisa_books.pkl에 저장된 모든 도서 데이터를 로드
+## 참고 사항
+- GPU 사용 시 `torch.cuda.is_available()`로 CUDA 인식 확인  
+- 임베딩 모델은 재학습 없이 `.pt` 파일을 재사용 가능  
+- `top_n` 값으로 추천 다양성 조절 가능  
 
-book_embeddings.pt의 SBERT 벡터를 이용해 각 책의 의미적 표현 비교
+---
 
-사용자가 읽은 책(reading_logs)과 유사한 줄거리 임베딩을 가진 책을 탐색
+## 요약
 
-최상위 top_n개 결과를 반환
+| 항목 | 설명 |
+|------|------|
+| **분석 대상** | 사용자 글쓰기, 독서록 |
+| **핵심 기능** | 단어 분석, 유사어 추천, 사전 정의 매칭, 도서 추천 |
+| **핵심 모델** | SBERT, Custom SentenceTransformer (output_kids_words) |
+| **DB 연동** | PostgreSQL 기반 ORM |
+| **주요 라이브러리** | `torch`, `sentence-transformers`, `pandas`, `tqdm`, `dotenv`, `xmltodict` |
 
-### 관련 파일
+---
 
-파일	역할
-```
-save_embbading_book.py	도서 데이터 임베딩 및 저장
-bookRecomm_sbert.py	도서 추천 로직 (유사도 계산, 가중치 적용 등)
-kcisa_books.pkl	        도서 메타데이터 (줄거리, 저자, 장르 등)
-book_embeddings.pt	도서 임베딩 벡터 파일
-pg_connect.py	DB 연결 및 ORM 처리
-reading_logs (DB)	사용자 독서 이력 테이블
-```
-### 참고
-
-SBERT(Sentence-BERT)를 이용한 문장 의미 임베딩 기반 유사도 계산
-
-GPU 사용 시 torch.cuda.is_available()로 CUDA 인식 여부 확인
-
-도서 추천 모델은 한 번 임베딩 생성 후 .pt 파일로 재사용 가능
-
-top_n 값 조정으로 추천 다양성 제어 가능
+**작성자 메모:**  
+본 모듈은 "사용자 글의 어휘 패턴을 분석하고, 유사어 및 의미 확장 추천을 통해 언어적 다양성 피드백을 제공"하는 것을 목표로 합니다.

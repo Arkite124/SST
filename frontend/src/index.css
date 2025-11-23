@@ -10,6 +10,25 @@
 
 body {
     @apply font-main bg-white text-textmain;
+    overflow-y: scroll; /* 스크롤은 유지 */
+}
+
+/* 스크롤바 숨김 (모바일에서만) */
+@media (max-width: 768px) {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none; /* IE/Edge */
+        scrollbar-width: none;    /* Firefox */
+    }
+}
+
+html.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+html.no-scrollbar {
+    scrollbar-width: none;
 }
 
 @font-face {
@@ -43,6 +62,37 @@ body {
 
 .animate-pop-bounce {
   animation: popBounce 0.5s ease-out forwards;
+}
+
+@keyframes slide-fwd-left {
+    0% {
+        opacity: 0;
+        transform: scale(0.7) translateZ(0) translateX(100px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateZ(160px) translateX(0);
+    }
+}
+
+/* 메인화면 구름 애니메이션 */
+@keyframes float-cloud {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-12px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+/* 메인화면 구름 애니메이션 */
+.cloud-animation {
+    animation:
+            slide-fwd-left 0.45s cubic-bezier(.215,.61,.355,1.000) .2s both,
+            float-cloud 3s ease-in-out 0.7s infinite;
 }
 
 /* 📅 react-calendar 일요일부터 시작 */

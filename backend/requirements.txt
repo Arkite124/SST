@@ -7,7 +7,7 @@ starlette~=0.37.2
 # database
 SQLAlchemy
 psycopg2-binary==2.9.10
-psycopg
+psycopg[binary]
 pgvector
 
 # HTTP & utility
@@ -40,6 +40,10 @@ datasets==3.2.0
 sentencepiece==0.2.0
 codecarbon==2.8.2
 
+torch==2.6.0
+torchvision==0.21.0
+torchaudio==2.6.0
+
 # Korean NLP
 kiwipiepy
 konlpy
@@ -63,7 +67,7 @@ git+https://github.com/ssut/py-hanspell.git@master
 gunicorn==20.1.0
 
 # Installation Order
-# 0. pip install --upgrade pip
+# 0. python -m pip install --upgrade pip
 
 # 1. TTS Library = Install Melo
 # git clone https://github.com/myshell-ai/MeloTTS.git
@@ -73,4 +77,3 @@ gunicorn==20.1.0
 
 # $env:PYTHONUTF8=1
 # 2. pip install --no-cache-dir -r requirements.txt
-

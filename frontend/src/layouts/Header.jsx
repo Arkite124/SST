@@ -36,22 +36,24 @@ function Header() {
 
     return (
         <header className="bg-white shadow-sm sticky top-0 z-50">
-            <div className="flex items-center justify-between px-4 lg:px-20 2xl:px-[300px] py-2 lg:py-4">
-                {/* ✅ 왼쪽: 로고 */}
-                <Link to="/" className="flex items-center">
+            <div className="flex items-center px-4 lg:px-20 py-2 relative">
+
+                {/* 모바일 로고: 가운데 정렬
+        md 이상에서는 static 으로 원래 자리 복귀 */}
+                <Link
+                    to="/"
+                    className="flex items-center absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
+                >
                     <img
                         src={logoImg}
                         alt="새싹톡 로고"
-                        className="
-              h-10    /* 모바일 */
-              lg:h-14 /* 데스크탑 */
-            "
+                        className="h-10 md:h-12"
                         style={{ marginLeft: "20px", marginBottom: "-5px", marginTop: "-5px" }}
                     />
                 </Link>
 
-                {/* ✅ 가운데: navItems */}
-                <nav className="hidden md:flex flex-1 justify-center space-x-12 font-normal text-2xl items-center pt-3 font-juache">
+                {/* nav는 md 이상에서만 보여서 모바일에 영향 없음 */}
+                <nav className="hidden md:flex flex-1 justify-center space-x-12 font-juache text-2xl items-center pt-3">
                     {navItems.map(({ path, label }) => (
                         <Link
                             key={path}
@@ -67,8 +69,16 @@ function Header() {
                     ))}
                 </nav>
 
-                {/* ✅ 오른쪽: 로그인/마이페이지/로그아웃 */}
-                <div className="hidden md:flex items-center space-x-4">
+                {/* 모바일 햄버거 버튼: 오른쪽 정렬 */}
+                <button
+                    className="md:hidden text-3xl text-[#3d5919] ml-auto"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                >
+                    ☰
+                </button>
+
+                {/* md 이상 오른쪽 로그인/마이페이지 */}
+                <div className="hidden md:flex items-center space-x-4 ml-auto">
                     {user == null ? (
                         <Link
                             to="/login"
@@ -82,15 +92,15 @@ function Header() {
                                 to="/mypage/dashboard"
                                 className={`pb-1 ${
                                     isActive("/mypage")
-                                        ? "text-[#cff09e] border-b-2 border-[#cff09e]"
-                                        : "text-[#3d5919] hover:text-[#3d5919]"
+                                        ? "text-[#cff09e] border-[#cff09e] font-juache text-xl mb-[-10px]"
+                                        : "text-[#3d5919] hover:text-[#3d5919] font-juache text-xl mb-[-10px]"
                                 }`}
                             >
-                                마이페이지
+                                {user?.name} 님의 활동
                             </Link>
                             <button
                                 onClick={handleLogout}
-                                className="text-[#3d5919] hover:text-[#4E944F] text-sm"
+                                className="px-4 py-1.5 rounded-xl text-white font-semibold bg-[#3d5919] hover:bg-[#4E944F] transition-colors"
                             >
                                 로그아웃
                             </button>
@@ -107,18 +117,12 @@ function Header() {
                     )}
                 </div>
 
-                {/* ✅ 모바일 메뉴 버튼 */}
-                <button
-                    className="md:hidden text-3xl text-[#3d5919]"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                >
-                    ☰
-                </button>
             </div>
+
 
             {/* ✅ 모바일 메뉴 */}
             {menuOpen && (
-                <div className="md:hidden bg-white border-t border-[#3d5919]-200 px-6 py-4 space-y-3 text-lg shadow-sm">
+                <div className="font-juache md:hidden bg-white border-t border-[#3d5919]-200 px-6 py-4 space-y-2 text-xl shadow-sm">
                     {navItems.map(({ path, label }) => (
                         <Link
                             key={path}
@@ -126,7 +130,7 @@ function Header() {
                             onClick={() => setMenuOpen(false)}
                             className={`block ${
                                 isActive(path)
-                                    ? "text-[#cff09e] font-semibold"
+                                    ? "text-[#cff09e]"
                                     : "text-[#3d5919] hover:text-[#3d5919]"
                             }`}
                         >

@@ -82,7 +82,7 @@ export default function StudentDiscussionPage() {
         const prev = posts;
         setPosts(posts.filter((p) => p.id !== id));
         try {
-            await axiosInstance.delete(`/community/student/${id}`);
+            await axiosInstance.delete(`/community/student/posts/${id}`);
             await confirm("삭제 완료", "게시글이 삭제되었습니다.");
             fetchPosts();
         } catch (err) {
@@ -101,7 +101,8 @@ export default function StudentDiscussionPage() {
     }, [page]);
 
     const totalPages = Math.ceil(total / size);
-
+    console.log("로그인 유저 id:", user.id);
+    console.log("게시글 user_id:", posts.map(p => p.user_id));
     return (
         <div className="p-1">
             {/* 제목 + 버튼 */}
@@ -205,7 +206,8 @@ export default function StudentDiscussionPage() {
                             const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 ${dateObj.getHours()}시 ${dateObj.getMinutes()}분`;
 
                             return (
-                                <li key={post.id} className="border p-3 rounded-2xl flex flex-col items-start bg-white">
+                                <li key={post.id} className="border p-3 rounded-2xl flex flex-col items-start bg-white"
+                                    onClick={() => navigate(`/community/student-discussion/${post.id}`)}>
                                     <span className="flex w-full justify-between items-center mb-1">
                                         <span>
                                             <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
@@ -224,7 +226,10 @@ export default function StudentDiscussionPage() {
                                         <span className="whitespace-pre-wrap">{post.content}</span>
                                         {user && post.user_id === user.id && (
                                             <button
-                                                onClick={() => deletePost(post.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // 클릭 이벤트 버블 방지
+                                                    deletePost(post.id);
+                                                }}
                                                 className="text-red-600 hover:text-red-700 text-sm"
                                             >
                                                 삭제

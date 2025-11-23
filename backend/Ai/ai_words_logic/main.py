@@ -4,7 +4,7 @@ import sys
 from dotenv import load_dotenv
 import time
 
-from backend.Ai.ai_common.gpu_start import get_device_cuda
+from ai_common.gpu_start import get_device_cuda
 
 current_dir = Path(__file__).resolve().parent
 models_dir = current_dir.parent.parent  # ../../
@@ -15,12 +15,11 @@ from sqlalchemy.orm import Session
 from models import DailyWritings, UserWordUsage
 from word_analyze import extract_tokens, safe_spell_check
 from word_dictionary import get_best_definition, get_sentence_for_word
-from word_similarity import load_model_and_corpus, run_training
+from word_similarity import load_model_and_corpus
 
 from sentence_transformers import SentenceTransformer
 
-# 디바이스, ST 모델, 유사어 함수
-
+# 디바이스, ST 모델 로드
 DEVICE = get_device_cuda()
 CTX_MODEL_NAME = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"
 # CTX_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
@@ -30,17 +29,19 @@ load_dotenv()
 DB_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DB_URL)
 
-def ensure_similar_fn():
-    try:
-        return load_model_and_corpus()
-    except FileNotFoundError:
-        print("[Info] 임베딩 없음, 학습 시작...")
-        return run_training(5)
-
-
-similar_fn = ensure_similar_fn()
-
-
+# 유사어 검색 함수 로드 (캐시 우선, 없으면 허깅페이스 모델 사용)
+print("[Info] 유사어 검색 모델 로드 중...")
+try:
+    similar_fn = load_model_and_corpus()  # 파라미터 없으면 기본값 사용 (캐시 우선)
+    print("[Info] 유사어 검색 모델 로드 완료")
+except FileNotFoundError as e:
+    print(f"[Warning] 유사어 모델 로드 실패: {e}")
+    print("[Info] 유사어 검색 기능을 사용할 수 없습니다.")
+    similar_fn = None
+except Exception as e:
+    print(f"[Error] 예상치 못한 오류: {e}")
+    print("[Info] 유사어 검색 기능을 사용할 수 없습니다.")
+    similar_fn = None
 
 
 # -----------------------------
@@ -77,7 +78,7 @@ def process_and_store_daily_writing(user_id: int, id: int):
             session.add(usage)
         session.commit()
 
-        print(f" 단어 사용 기록 저장 완료: {len(combined_counter)}개")
+        print(f"단어 사용 기록 저장 완료: {len(combined_counter)}개")
 
         # 단어가 포함된 문장들을 합쳐서 단어와 쌍으로 튜플리스트 생성
         sentence_word_pairs = [
@@ -87,7 +88,7 @@ def process_and_store_daily_writing(user_id: int, id: int):
             sentence_word_pairs,
             model,
             threshold=0.25
-        ) # 배치로 정의 가져오기
+        )  # 배치로 정의 가져오기
 
         # 5) top_words 출력
         print("\n📌 Top 3 단어 + 사전 의미 + 유사어")
@@ -99,9 +100,17 @@ def process_and_store_daily_writing(user_id: int, id: int):
                 print(f"'{word}' 의미: 찾을 수 없음 (score={score:.3f})")
 
             # 유사어 처리
+            if similar_fn is None:
+                print("유사한 단어들: (모델 미로드)")
+                continue
+
             print("유사한 단어들:")
             try:
                 candidates = similar_fn(word, topk=2)
+                if not candidates:
+                    print("  (유사어 없음)")
+                    continue
+
                 for w, s in candidates:
                     if s >= 0.7:
                         # 유사어도 미리 문장 추출
@@ -115,10 +124,10 @@ def process_and_store_daily_writing(user_id: int, id: int):
             except Exception as e:
                 print(f"  (유사어 검색 중 오류: {e})")
 
+
 # -----------------------------
 # main
 # -----------------------------
-#
 if __name__ == "__main__":
     start_time = time.time()
     process_and_store_daily_writing(user_id=1, id=1)

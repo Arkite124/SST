@@ -1,43 +1,56 @@
 from pathlib import Path
 import sys
 
+from db.postgresDB import SessionLocal
+
 current_dir = Path(__file__).resolve().parent
 models_dir = current_dir.parent.parent  # ../../
 sys.path.append(str(models_dir))
 
+
+from pathlib import Path
+import sys
 import os
 import uuid
 from dotenv import load_dotenv
 from datetime import datetime
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
 import pandas as pd
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
+
+from db.models import SimilarWords, ReadingLogs
 
 
-from backend.Ai.ai_common.clean_contents import safe_spell_check
-from backend.Ai.ai_words_logic.word_analyze import extract_tokens
-from backend.models import SimilarWords, DailyWritings, UserWordUsage, Outputs, ReadingLogs  # Outputs 추가
+# from ai_common.clean_contents import safe_spell_check
+# from ai_words_logic.word_analyze import extract_tokens
+# from db.models import SimilarWords, DailyWritings, UserWordUsage, Outputs, ReadingLogs  # Outputs 추가
+
+current_dir = Path(__file__).resolve().parent
+models_dir = current_dir.parent.parent  # ../../
+sys.path.append(str(models_dir))
 
 load_dotenv()
 DB_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DB_URL)
+
+if not DB_URL:
+    raise ValueError("❌ DATABASE_URL 환경변수가 설정되어 있지 않습니다. .env 파일을 확인하세요.")
+
+engine = create_engine(DB_URL, echo=False, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
 def get_session():
-    from backend.data.postgresDB import SessionLocal
+    """SessionLocal 인스턴스를 반환 (원격 DB 연결)"""
     return SessionLocal()
-
 
 # ============================
 # similar_words 추출 (모델 학습용)
 # ============================
 def extract_similar_words():
-
     with get_session() as db:
         rows = db.query(SimilarWords).all()
-
         data = []
         for row in rows:
             sims = row.similar_words if row.similar_words else []
@@ -45,9 +58,9 @@ def extract_similar_words():
                 "base_word": row.base_word,
                 "similar_words": sims
             })
-
         df = pd.DataFrame(data)
         return df
+
 
 
 # ============================

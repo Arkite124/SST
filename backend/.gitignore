@@ -3,3 +3,4 @@ venv
 Test/data
 app/games/data
 .env
+__pycache__
