@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import torch
 from sentence_transformers import SentenceTransformer, util
 
-from backend.Ai.ai_common.gpu_start import get_device_cuda
+from ai_common.gpu_start import get_device_cuda
 
 load_dotenv()
 
@@ -139,9 +139,9 @@ def get_best_definition(sentence_word_pairs: List[tuple], model: SentenceTransfo
     alpha: POS 가중치를 cosine score에 곱해 합산
     """
     if pos_weights is None:
-        pos_weights = {"대명사":0.8, "동사":0.5, "명사":0.5}
+        pos_weights = {"대명사":1.5, "명사":1.3, "동사":1.0, "형용사":1.0}
     if pos_priority is None:
-        pos_priority = ["동사","대명사","명사"]
+        pos_priority = ["대명사","명사","동사", "형용사"]
     if exclude_pos is None:
         exclude_pos = []
         # exclude_pos = ["접사", "접두사", "접미사"]

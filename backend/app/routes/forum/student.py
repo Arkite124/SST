@@ -47,6 +47,7 @@ class ReadingForumPostUpdate(BaseModel):
 # ✅ 글 조회 응답용 (User 정보 + children 포함)
 class ReadingForumPostRead(BaseModel):
     id: int
+    user_id: int
     parent_id: Optional[int] = None
     title: Optional[str]
     content: str
@@ -109,6 +110,7 @@ def get_posts(
         ReadingForumPostRead(
             id=post.id,
             title=post.title,
+            user_id=post.user_id,
             parent_id=post.parent_id,
             content=post.content,
             book_title=post.book_title,
@@ -116,7 +118,7 @@ def get_posts(
             created_at=post.created_at,
             updated_at=post.updated_at,
             comment_count=comment_count,
-            user=post.user,
+            user=post.user, # 유저객체 가져옴
         )
         for post, comment_count in results
     ]

@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # 맞춤법 검사기 모듈 가져오기
-from Ai.ai_common.clean_contents import safe_spell_check
+from ai_common.clean_contents import safe_spell_check
 
 
 kiwi = Kiwi()
@@ -45,7 +45,7 @@ def extract_tokens(text: str):
     # 빈도 계산
     counter_nouns = Counter(nouns)
     counter_verbs = Counter(verbs)
-    counter_adjective = Counter(adjective)
+    counter_adjectives = Counter(adjective)
 
     words_all = text_clean.split()
     counter_words = Counter(words_all)
@@ -70,7 +70,7 @@ def extract_tokens(text: str):
         "pos": tokens,
         "counter_nouns": counter_nouns,
         "counter_verbs": counter_verbs,
-        "counter_adjective": counter_adjective,
+        "counter_adjectives": counter_adjectives,
         "words": unique_words,
         "counter_words": counter_words,
         "avg_sentence_len": avg_sentence_len,

@@ -12,10 +12,11 @@ class SimilarWords(Base):
     __tablename__ = 'similar_words'
     __table_args__ = (
         PrimaryKeyConstraint('id', name='similar_words_pkey'),
+        UniqueConstraint('base_word', name='similar_words_base_word_key')
     )
 
     id = mapped_column(Integer)
-    base_word = mapped_column(String(50), nullable=False)
+    base_word = mapped_column(String(100), nullable=False)
     similar_words = mapped_column(JSONB)
 
 
@@ -92,12 +93,12 @@ class DailyWritings(Base):
     )
 
     id = mapped_column(Integer)
+    mood = mapped_column(Integer, nullable=False)
     created_at = mapped_column(DateTime, nullable=False, server_default=text('now()'))
     content = mapped_column(Text, nullable=False)
     user_id = mapped_column(Integer)
     title = mapped_column(String(255))
     cleaned_content = mapped_column(Text)
-    mood = mapped_column(Integer, nullable=False)
     attachment_url = mapped_column(String(255))
 
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='daily_writings')
@@ -163,12 +164,13 @@ class ReadingLogs(Base):
     book_title = mapped_column(String(255), nullable=False)
     user_id = mapped_column(Integer)
     updated_at = mapped_column(DateTime)
-    sentiment = mapped_column(String(20))
     author = mapped_column(String(255))
     publisher = mapped_column(String(255))
     content = mapped_column(Text)
     cleaned_content = mapped_column(Text)
     unknown_sentence = mapped_column(Text)
+    sentiment= mapped_column(String(20))
+
 
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='reading_logs')
 
@@ -184,17 +186,17 @@ class Subscriptions(Base):
     user_id = mapped_column(Integer, nullable=False)
     plan_name = mapped_column(String(50), nullable=False)
     amount = mapped_column(Integer, nullable=False)
-    billing_key = mapped_column(String(100), nullable=False)
     start_date = mapped_column(DateTime, nullable=False)
     end_date = mapped_column(DateTime, nullable=False)
     paid_at = mapped_column(DateTime, nullable=False)
+    billing_key = mapped_column(String(100))
     order_id = mapped_column(String(100))
     method = mapped_column(String(20))
     status = mapped_column(String(20), server_default=text("'authorized'::character varying"))
-    next_plan_name = mapped_column(String(50))
-    next_amount = mapped_column(Integer)
     created_at = mapped_column(DateTime, server_default=text('now()'))
     updated_at = mapped_column(DateTime, server_default=text('now()'))
+    next_plan_name = mapped_column(String(50))
+    next_amount = mapped_column(Integer)
 
     user: Mapped['Users'] = relationship('Users', back_populates='subscriptions')
 
@@ -263,6 +265,18 @@ class UserTests(Base):
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='user_tests')
 
 
+class UserWordTotal(Users):
+    __tablename__ = 'user_word_total'
+    __table_args__ = (
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='user_word_total_user_id_fkey'),
+        PrimaryKeyConstraint('user_id', name='user_word_total_pkey')
+    )
+
+    user_id = mapped_column(Integer)
+    total_frequency = mapped_column(Integer, nullable=False, server_default=text('0'))
+    word = mapped_column(String(50))
+
+
 class Outputs(Base):
     __tablename__ = 'outputs'
     __table_args__ = (
@@ -279,7 +293,7 @@ class Outputs(Base):
 
     content: Mapped[Optional['DailyWritings']] = relationship('DailyWritings', back_populates='outputs')
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='outputs')
-    user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='record')
+    user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='outputs')
 
 
 class UserWordUsage(Base):
@@ -301,5 +315,5 @@ class UserWordUsage(Base):
     created_at = mapped_column(Date)
 
     content: Mapped[Optional['DailyWritings']] = relationship('DailyWritings', back_populates='user_word_usage')
-    record: Mapped[Optional['Outputs']] = relationship('Outputs', back_populates='user_word_usage')
+    outputs: Mapped[Optional['Outputs']] = relationship('Outputs', back_populates='user_word_usage')
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='user_word_usage')
