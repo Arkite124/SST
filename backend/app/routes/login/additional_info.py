@@ -7,6 +7,7 @@ from models import Users as User
 from jose import jwt
 import os
 from datetime import datetime, timedelta
+from app.routes.login.login import get_current_user   # 🔥 추가
 
 router = APIRouter(prefix="/auth/additional-info", tags=["auth"])
 
@@ -21,32 +22,33 @@ def get_db():
         db.close()
 
 class AdditionalInfo(BaseModel):
-    id: int
     nickname: str
     age: int
     gender: str
     phone: str
-    email: str
 
-    class Config:
-        from_attribute = True  # ORM → Pydantic 변환 허용
 def create_access_token(user_id: int, expires_minutes: int = 60):
-    expire = datetime.now() + timedelta(minutes=expires_minutes)
+    expire = datetime.utcnow() + timedelta(minutes=expires_minutes)
     return jwt.encode({"sub": str(user_id), "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(user_id: int):
-    expire = datetime.now() + timedelta(days=7)
+    expire = datetime.utcnow() + timedelta(days=7)
     return jwt.encode({"sub": str(user_id), "exp": expire, "type": "refresh"}, SECRET_KEY, algorithm=ALGORITHM)
 
-
 @router.post("/")
-async def save_additional_info(data: AdditionalInfo, db: Session = Depends(get_db)):
-    # 1) 이메일로 사용자 찾기
-    user = db.query(User).filter(User.email == data.email).first()
+async def save_additional_info(
+    data: AdditionalInfo,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)  # 🔥 여기서 유저 가져옴
+):
+
+    # 1) 현재 로그인된 유저 기준 조회
+    user = db.query(User).filter(User.id == current_user.id).first()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # 2) 이미 정보가 있으면 중복 방지
+    # 2) 이미 정보가 있으면 막기
     if user.nickname:
         raise HTTPException(status_code=400, detail="추가정보가 이미 등록된 사용자입니다.")
 
@@ -55,13 +57,13 @@ async def save_additional_info(data: AdditionalInfo, db: Session = Depends(get_d
     user.age = data.age
     user.gender = data.gender
     user.phone = data.phone
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now()
 
     db.commit()
     db.refresh(user)
 
-    # 4) JWT 발급해서 자동 로그인 상태 만들기
-    access_token = create_access_token(user.id, expires_minutes=60)
+    # 4) 새로운 JWT 발급
+    access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
 
     response = JSONResponse({"message": "추가정보 저장 완료", "user_id": user.id})
@@ -79,7 +81,7 @@ async def save_additional_info(data: AdditionalInfo, db: Session = Depends(get_d
         httponly=True,
         secure=False,
         samesite="none",
-        max_age=3600*24*7
+        max_age=3600 * 24 * 7
     )
 
     return response
