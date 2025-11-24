@@ -17,16 +17,16 @@ const WordChainPage = () => {
     useAuthLoad()
     useCheckUser();
     return (
-        <div className="min-h-[70%] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center p-4">
+        <div className="z-20 min-h-[70%] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center p-4">
             <div className="w-full max-w-4xl h-full flex flex-col">
                 {/* 헤더 */}
                 <div className="flex justify-between items-center mb-2">
                     <GameButton
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/games')}
                         variant="secondary"
                         className="text-sm"
                     >
-                        ← 홈으로
+                        ← 목록으로
                     </GameButton>
                     <h1 className="text-2xl font-bold text-green-700">
                         끝말잇기 게임
