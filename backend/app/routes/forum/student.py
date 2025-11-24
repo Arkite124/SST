@@ -109,6 +109,7 @@ def get_children_level2(db: Session, parent_id: int) -> List[ReadingForumPostRea
                 children=[
                     ReadingForumPostRead(
                         id=reply.id,
+                        user_id=reply.user_id,  # ⬅ 추가!!
                         parent_id=reply.parent_id,
                         title=reply.title,
                         content=reply.content,
@@ -209,7 +210,6 @@ def get_posts(
 
     return {"total": total, "page": page, "size": size, "items": items}
 
-
 # ✅ 게시글 상세 + 댓글/대댓글(2 depth) 포함
 @router.get(
     "/posts/{list_id}",
@@ -241,6 +241,7 @@ def get_post(list_id: int, db: Session = Depends(get_db)):
 
     return ReadingForumPostRead(
         id=post.id,
+        user_id=post.user_id,
         parent_id=post.parent_id,
         title=post.title,
         content=post.content,

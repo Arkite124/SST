@@ -31,7 +31,7 @@ export default function ParentBoardPage() {
         setError("");
 
         try {
-            const res = await axios.get(`/community/parent/posts?page=${page}&size=${size}`);
+            const res = await axios.get(`/communities/parent/posts?page=${page}&size=${size}`);
             setPosts(res.data || []);
         } catch (err) {
             console.error("❌ 목록 실패:", err);
@@ -65,7 +65,7 @@ export default function ParentBoardPage() {
         setError("");
 
         try {
-            const res = await axiosInstance.post("/community/parent/posts", {
+            const res = await axiosInstance.post("/communities/parent/posts", {
                 user_id: user.id,
                 parent_id: null,
                 title,
@@ -109,7 +109,7 @@ export default function ParentBoardPage() {
         setPosts(posts.filter((p) => p.id !== id));
 
         try {
-            await axios.delete(`/community/parent/posts/${id}`);
+            await axiosInstance.delete(`/communities/parent/posts/${id}`);
             await alert("삭제 완료", "게시글이 삭제되었습니다.");
         } catch (err) {
             console.error("삭제 실패:", err);

@@ -2,38 +2,31 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PostDetail from "@/components/Community/PostDetail.jsx";
 import CommentList from "@/components/Community/CommentList.jsx";
+import axiosInstance from "@/utils/axiosInstance.js";
+import {useModal} from "@/contexts/ModalContext.jsx";
 
 export default function StudentDiscussionDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
-
+    const {alert} = useModal();
     useEffect(() => {
         const fetchPost = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`/community/student/posts/${id}`, {
-                    headers: { "Accept": "application/json" } // JSON 요청 명시
-                });
-
-                if (!res.ok) {
-                    // 404, 500 등 에러 상태 처리
-                    throw new Error(`게시글을 불러오지 못했습니다. (status: ${res.status})`);
-                }
-
-                const data = await res.json();
-
-                // 데이터가 실제로 있는지 확인
+                const res = await axiosInstance.get(`/communities/student/posts/${id}`);
+                // axios 응답 구조에 맞게 수정
+                const data = res.data;
                 if (!data || !data.id) {
                     throw new Error("존재하지 않는 게시글입니다.");
                 }
-
                 setPost(data);
+
             } catch (err) {
                 console.error(err);
-                alert(err.message);
-                navigate(-1); // 에러 시 뒤로가기
+                alert("오류", err.message || "게시글을 불러오지 못했습니다.");
+                navigate(-1);
             } finally {
                 setLoading(false);
             }

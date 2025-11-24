@@ -1,13 +1,21 @@
 // CommentList.jsx
 import { useEffect, useState } from "react";
+import axiosInstance from "@/utils/axiosInstance.js";
+import {useModal} from "@/contexts/ModalContext.jsx";
 
 export default function CommentList({ postId }) {
     const [comments, setComments] = useState([]);
-
+    const {alert}=useModal()
     useEffect(() => {
-        fetch(``)
-            .then(res => res.json())
-            .then(data => setComments(data));
+        const fetchComments = async () => {
+            try {
+                const res = await axiosInstance.get(`communities/student/comments/${postId}`);
+                setComments(res.data);
+            } catch {
+                alert("서버 오류","연결을 확인해주세요.")
+            }
+        };
+        fetchComments();
     }, [postId]);
 
     return (
