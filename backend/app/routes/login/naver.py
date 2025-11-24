@@ -1,32 +1,18 @@
-from datetime import timedelta
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
 import os
-from datetime import datetime
+from jose import jwt
+from datetime import datetime, timedelta
+from app.routes.login.login import create_access_token, create_refresh_token
 from models import Users as User
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from jose import jwt
 load_dotenv()
-
+SECRET_KEY = os.getenv("SECRET_KEY", "tempsecret")  # 필요하면 .env 에 추가
 router = APIRouter(prefix="/auth/naver", tags=["naver"])
 oauth = OAuth()
-
-# ✅ 환경변수
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-
-def create_access_token(user_id: int, expires_delta: int = 60):
-    expire = datetime.utcnow() + timedelta(minutes=expires_delta)
-    payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-def create_refresh_token(user_id: int, expires_days: int = 7):
-    expire = datetime.utcnow() + timedelta(days=expires_days)
-    payload = {"sub": str(user_id), "exp": expire, "type": "refresh"}
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 oauth.register(
     name="naver",
@@ -48,12 +34,18 @@ def get_db():
 # 네이버 로그인 요청
 @router.get("/login")
 async def naver_login(request: Request):
+    """
+    네이버 로그인 요청을 보내는 엔드포인트 입니다.
+    """
     redirect_uri = request.url_for("naver_callback")
     return await oauth.naver.authorize_redirect(request, redirect_uri)
 
 # 네이버 콜백 처리
 @router.get("/callback")
 async def naver_callback(request: Request, db: Session = Depends(get_db)):
+    """
+    네이버 콜백 요청을 보내는 엔드포인트 입니다.
+    """
     try:
         token = await oauth.naver.authorize_access_token(request)
     except Exception as e:
@@ -66,42 +58,51 @@ async def naver_callback(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Userinfo request failed: {str(e)}")
 
     if not user_info:
-        raise HTTPException(status_code=400, detail="Naver authentication failed")
+        raise HTTPException(status_code=400, detail="네이버 인증이 실패했습니다.")
 
     email = user_info.get("email")
     if not email:
-        raise HTTPException(status_code=400, detail="Naver did not return email. Check consent settings.")
+        raise HTTPException(status_code=400, detail="네이버 이메일 등록여부를 확인해주세요.")
 
     # ✅ DB 조회/생성
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        # 신규 회원 → 추가정보 입력 페이지 이동
         user = User(email=email, name=user_info.get("name"), oauth="naver")
         db.add(user)
         db.commit()
         db.refresh(user)
-        return RedirectResponse(f"http://localhost:5173/additional-info?email={user.email}")
 
+        # 임시 토큰 발급 (10분 유효)
+        temp_token = jwt.encode(
+            {
+                "user_id": user.id,
+                "type": "social_signup",
+                "exp": datetime.utcnow() + timedelta(minutes=10)
+            },
+            SECRET_KEY,
+            algorithm="HS256"
+        )
+
+        return RedirectResponse(f"http://localhost:5173/social?token={temp_token}")
     # ✅ JWT 발급
-    access_token = create_access_token(user.id, expires_delta=15)
+    access_token = create_access_token(user.id, expires_minutes=60)
     refresh_token = create_refresh_token(user.id, expires_days=7)
-
-    # ✅ JWT를 httpOnly 쿠키에 저장
     response = RedirectResponse("http://localhost:5173/")
+    # response = RedirectResponse("/")
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=False,    # 개발환경 False / 배포 True
-        samesite="none", # 크로스 도메인 허용
-        max_age=900,     # 15분
+        samesite="lax", # 크로스 도메인 허용
+        max_age=3600,     # 15분
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=False,
-        samesite="none",
+        samesite="lax",
         max_age=3600*24*7,  # 7일
     )
     return response

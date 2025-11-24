@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     profile_img_url VARCHAR(255) default null,
-    key_parent VARCHAR(100) default null  --부모인증키
+    key_parent VARCHAR(255) default null  --부모인증키
     --is_active BOOLEAN DEFAULT TRUE --옅은 삭제에 대해 말씀하심,
 );
 

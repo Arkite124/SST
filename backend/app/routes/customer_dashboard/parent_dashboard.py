@@ -51,7 +51,32 @@ class ParentLoginSchema(BaseModel):
 # ✅ 부모 로그인
 # ✅ 부모 로그인 (자녀 계정 로그인 상태 필요)
 
-@router.post("/login")
+@router.post(
+    "/login",
+    summary="부모 대시보드 로그인 (parent_key 인증)",
+    description="""
+부모가 자녀 계정의 parent_key 를 입력하여 부모 모드로 로그인합니다.  
+성공 시 `parent_token` JWT를 **HTTP-Only 쿠키**로 발급합니다.
+
+### 주요 기능
+- 자녀 계정이 로그인되어 있어야 함 (`get_current_user`)
+- parent_key는 bcrypt로 암호화되어 있으며 일치 여부 확인
+- 발급된 JWT에는 `"parent": true` 포함
+
+### Request Body 예시
+```json
+{
+  "parent_key": "1234abcd"
+}           ```
+Response 예시
+```json
+{
+  "parent_token": "jwt.token.value",
+  "token_type": "bearer",
+  "user_id": 7
+}
+"""
+)
 def parent_login(
     payload: ParentLoginSchema,
     current_user: Users = Depends(get_current_user),   # ✅ 여기서 주입받음
@@ -103,13 +128,33 @@ def get_current_parent_token(parent_token: str = Cookie(None), db: Session = Dep
 # ───────────────────────────────
 # 1️⃣ 일일 활동량 차트 (글쓰기 / 독서 / 테스트 / 게임)
 # ───────────────────────────────
-@router.get("/activity/chart")
+@router.get(
+    "/activity/chart",
+    summary="자녀 1개월 활동량 차트 조회",
+    description="""
+최근 1개월 동안 자녀의 **일일 활동량 변화**를 조회합니다.
+
+### 포함 데이터
+- 일기 작성 수 (`daily_writings`)
+- 독서 기록 수 (`reading_logs`)
+- 테스트 응시 수 (`tests`)
+- 게임 플레이 수 (`games`)
+
+### 반환 형식
+각 항목은 다음 형태의 배열로 반환됩니다:
+```json
+{
+  "date": "2025-01-10",
+  "count": 3
+}
+"""
+)
 def get_child_activity_chart(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_parent_token)
 ):
     """
-    📊 최근 1개월간 자녀의 일별 활동량 추이
+    최근 1개월간 자녀의 일별 활동량 추이
     """
     def format_data(queryset):
         return [{"date": q.date.strftime("%Y-%m-%d"), "count": q.count} for q in queryset]
@@ -157,7 +202,22 @@ def get_child_activity_chart(
 # ───────────────────────────────
 # 2️⃣ 테스트 점수 차트
 # ───────────────────────────────
-@router.get("/tests/chart")
+@router.get(
+    "/tests/chart",
+    summary="자녀 테스트 점수 평균 차트",
+    description="""
+최근 1개월 동안 자녀가 응시한 **테스트 유형별 평균 점수**를 조회합니다.
+
+### 주요 기능
+- vocabulary, reading 등 test_type 별 평균 점수 계산
+- 결과는 다음 형태로 반환됨:
+```json
+{
+  "test_type": "vocabulary",
+  "avg_score": 87.5
+}
+"""
+)
 def get_child_test_chart(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_parent_token)
@@ -179,7 +239,21 @@ def get_child_test_chart(
 # ───────────────────────────────
 # 3️⃣ 게임 점수 차트
 # ───────────────────────────────
-@router.get("/games/chart")
+@router.get(
+    "/games/chart",
+    summary="자녀 게임 점수 및 플레이 횟수 차트",
+    description="""
+최근 1개월 동안 자녀가 플레이한 **게임 유형별 평균 점수 + 플레이 횟수**를 조회합니다.
+
+### 반환 예시
+```json
+{
+  "game_type": "word_chain",
+  "avg_score": 72.5,
+  "count": 14
+}
+"""
+)
 def get_child_game_chart(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_parent_token)
@@ -202,13 +276,32 @@ def get_child_game_chart(
 # ───────────────────────────────
 # 4️⃣ 기분 변화 차트 (일기 mood)
 # ───────────────────────────────
-@router.get("/mood/chart")
+@router.get(
+    "/mood/chart",
+    summary="자녀 기분 변화 차트 (일일 평균)",
+    description="""
+최근 1개월 동안 자녀 일기에 기록된 **mood 값의 평균 변화 추이**를 조회합니다.
+
+### 반환 예시
+```json
+{
+  "date": "2025-01-11",
+  "avg_mood": 3.75
+}
+mood 필드 예시
+-1 = 매우 나쁨
+-2 = 나쁨
+-3 = 보통
+-4 = 좋음
+-5 = 매우 좋음
+"""
+)
 def get_child_mood_chart(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_parent_token)
 ):
     """
-    📊 최근 1개월간 일일 평균 기분 점수
+     최근 1개월간 일일 평균 기분 점수
     """
     mood_data = db.query(
         func.date_trunc("day", DailyWritings.created_at).label("date"),

@@ -23,7 +23,19 @@ class AdminUserSearchResult(BaseModel):
 # -------------------------------
 # 📘 관리자용 닉네임 검색 기능
 # -------------------------------
-@router.get("/search", response_model=List[AdminUserSearchResult])
+@router.get(
+    "/search",
+    response_model=List[AdminUserSearchResult],
+    summary="관리자용 닉네임 검색",
+    description="""
+관리자가 특정 닉네임을 가진 사용자를 검색합니다.
+
+### 주요 기능
+- 닉네임을 부분 일치(contains)로 검색
+- 사용자 ID / 닉네임 / 이메일 반환
+- 검색 결과가 없으면 빈 배열([]) 반환
+"""
+)
 def search_user_by_nickname(
     nickname: str,
     db: Session = Depends(get_db),
@@ -61,7 +73,38 @@ class AdminPostItem(BaseModel):
 # -------------------------------
 # 📘 특정 유저의 전체 글 가져오기
 # -------------------------------
-@router.get("/{user_id}", response_model=List[AdminPostItem])
+@router.get(
+    "/{user_id}",
+    response_model=List[AdminPostItem],
+    summary="관리자 - 특정 사용자의 전체 게시물 조회",
+    description="""
+관리자가 특정 사용자가 작성한 **모든 게시물**을 조회합니다.
+
+### 조회 대상
+- 읽기기록 (ReadingLogs)
+- 일기 작성 (DailyWritings)
+- 학생 토론게시판 글 (ReadingForumPosts)
+- 학부모 게시판 글 (ParentForumPosts)
+
+### 주요 기능
+- 모든 게시물을 하나의 리스트로 통합
+- category 필드로 게시물 출처 구분
+- 최신순(created_at DESC) 정렬 후 반환
+
+### 응답 예시
+```json
+[
+  {
+    "id": 12,
+    "user_id": 5,
+    "category": "reading_logs",
+    "title": "책 제목",
+    "content": "내용",
+    "created_at": "2025-01-01T12:00:00"
+  }
+]
+"""
+)
 def get_user_posts(
     user_id: int,
     db: Session = Depends(get_db),
@@ -139,7 +182,25 @@ def get_user_posts(
 # -------------------------------
 # 📘 관리자 글 삭제 기능
 # -------------------------------
-@router.delete("/{category}/{post_id}", response_model=dict)
+@router.delete(
+    "/{category}/{post_id}",
+    summary="관리자 - 특정 게시글 삭제",
+    description="""
+관리자가 게시물을 종류(category)와 ID로 지정하여 삭제합니다.
+
+### 지원하는 category
+- `reading_logs`
+- `daily_writings`
+- `reading_forum_posts`
+- `parent_forum_posts`
+
+### 주요 기능
+- category 값에 따라 해당 모델 자동 매핑
+- 존재하지 않는 게시글일 경우 404 반환
+- 삭제 성공 시 메시지와 post_id 반환
+- return 형태 : {"message": "게시글이 삭제되었습니다.", "post_id": post_id, "category": category}
+"""
+)
 def admin_delete_post(
     category: str,
     post_id: int,

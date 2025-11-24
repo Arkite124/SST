@@ -17,6 +17,7 @@ import WordSearchPage from "./pages/Activity/WordSearch/WordSearchPage";
 // 커뮤니티
 import CommunityPage from "./pages/Community/CommunityPage";
 import StudentDiscussionPage from "./pages/Community/StudentDiscussion/StudentDiscussionPage";
+import StudentDiscussionDetailPage from "./pages/Community/StudentDiscussion/StudentDiscussionDetailPage";
 import ParentBoardPage from "./pages/Community/ParentBoard/ParentBoardPage";
 
 // 테스트
@@ -53,6 +54,7 @@ import ProtectedProfileRoute from "./pages/MyPage/ProfileEdit/ProtectedProfileRo
 import ProfilePwConfirm from "./pages/MyPage/ProfileEdit/ProfilePwConfirm";
 import UserBanManager from "./pages/Admin/UserBanManager";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
+import Social from "@/pages/Auth/Register/Social.jsx";
 
 function App() {
     return (
@@ -76,7 +78,10 @@ function App() {
                         {/* 커뮤니티 */}
                         <Route path="community" element={<CommunityPage />}>
                             <Route index element={<StudentDiscussionPage />} />
+                            {/*학생 커뮤니티 목록 페이지*/}
                             <Route path="student-discussion" element={<StudentDiscussionPage />} />
+                            {/*학생 커뮤니티 상세페이지*/}
+                            <Route path="student-discussion/:id" element={<StudentDiscussionDetailPage />} />
                             <Route path="parent-board" element={<ParentBoardPage />} />
                         </Route>
 
@@ -121,6 +126,7 @@ function App() {
                         {/* 로그인 */}
                         <Route path="login" element={<LoginPage />} />
                         <Route path="register" element={<RegisterPage />} />
+                        <Route path="social" element={<Social />} /> {/*소셜 로그인 최초 정보 입력*/}
                         <Route path="find-account" element={<FindAccountPage />} />
                         <Route path="withdraw" element={<WithdrawPage />} />
                         <Route path="/auth/register" element={<RegisterPage />} />
