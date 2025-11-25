@@ -30,7 +30,6 @@ class UserNickname(BaseModel):
 
 # ✅ 글 생성 요청용
 class ReadingForumPostCreate(BaseModel):
-    user_id: int
     parent_id: Optional[int] = None  # 부모글 ID (없으면 부모글, 있으면 댓글/대댓글)
     title: Optional[str] = None # 댓글은 제목이 없기 때문에 게시글에서 예외처리 추가
     content: str
@@ -109,6 +108,7 @@ def get_children_level2(db: Session, parent_id: int) -> List[ReadingForumPostRea
                 children=[
                     ReadingForumPostRead(
                         id=reply.id,
+                        user_id=reply.user_id,  # ⬅ 추가!!
                         parent_id=reply.parent_id,
                         title=reply.title,
                         content=reply.content,
@@ -209,7 +209,6 @@ def get_posts(
 
     return {"total": total, "page": page, "size": size, "items": items}
 
-
 # ✅ 게시글 상세 + 댓글/대댓글(2 depth) 포함
 @router.get(
     "/posts/{list_id}",
@@ -241,6 +240,7 @@ def get_post(list_id: int, db: Session = Depends(get_db)):
 
     return ReadingForumPostRead(
         id=post.id,
+        user_id=post.user_id,
         parent_id=post.parent_id,
         title=post.title,
         content=post.content,
@@ -453,8 +453,9 @@ def create_comment(
     if not parent_post:
         raise HTTPException(status_code=404, detail="부모글이 존재하지 않습니다.")
 
-    if user.id != request.user_id:
-        raise HTTPException(status_code=401, detail="유저 확인 바랍니다.")
+    # 로그인 유저로 고정되기 때문에 삭제
+    # if user.id != request.user_id:
+    #     raise HTTPException(status_code=401, detail="유저 확인 바랍니다.")
 
     # 🔒 대대댓글 방지 (2 depth까지만 허용)
     if parent_post.parent_id is not None:
@@ -475,7 +476,17 @@ def create_comment(
     db.add(new_comment)
     db.commit()
     db.refresh(new_comment)
-    return new_comment
+    return ReadingForumPostRead(
+        id=new_comment.id,
+        user_id=new_comment.user_id,
+        parent_id=new_comment.parent_id,
+        content=new_comment.content,
+        created_at=new_comment.created_at,
+        updated_at=new_comment.updated_at,
+        user=UserNickname(nickname=user.nickname),
+        comment_count=0,
+        children=[],
+    )
 
 
 # ✅ 특정 부모글의 댓글 리스트 조회 (1 depth)

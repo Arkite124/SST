@@ -31,7 +31,7 @@ export default function StudentDiscussionPage() {
         setError("");
 
         try {
-            const res = await axiosInstance.get(`/community/student/posts?page=${page}&size=${size}`);
+            const res = await axiosInstance.get(`/communities/student/posts?page=${page}&size=${size}`);
             setPosts(res.data.items || []);
             setTotal(res.data.total || 0);
         } catch (err) {
@@ -53,7 +53,7 @@ export default function StudentDiscussionPage() {
         setError("");
 
         try {
-            await axiosInstance.post("/community/student/posts", {
+            await axiosInstance.post("/communities/student/posts", {
                 user_id: user.id,
                 discussion_tags: discussionTags,
                 title,
@@ -82,7 +82,7 @@ export default function StudentDiscussionPage() {
         const prev = posts;
         setPosts(posts.filter((p) => p.id !== id));
         try {
-            await axiosInstance.delete(`/community/student/posts/${id}`);
+            await axiosInstance.delete(`/communities/student/posts/${id}`);
             await confirm("삭제 완료", "게시글이 삭제되었습니다.");
             fetchPosts();
         } catch (err) {
@@ -101,8 +101,6 @@ export default function StudentDiscussionPage() {
     }, [page]);
 
     const totalPages = Math.ceil(total / size);
-    console.log("로그인 유저 id:", user.id);
-    console.log("게시글 user_id:", posts.map(p => p.user_id));
     return (
         <div className="p-1">
             {/* 제목 + 버튼 */}
