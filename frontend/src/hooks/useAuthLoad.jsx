@@ -8,20 +8,21 @@ import {useNavigate} from "react-router-dom";
 
 export default function useAuthLoad() {
     const dispatch = useDispatch();
-    const navigate=useNavigate();
+    const navigate = useNavigate();
+
     useEffect(() => {
-        // ✅ 앱 시작 시 세션 복원
         dispatch(fetchMeThunk());
-        dispatch(fetchParentMe())
-        // ✅ 주기적 refresh
+        dispatch(fetchParentMe());
+
         const interval = setInterval(async () => {
             try {
                 await axiosInstance.post("/auth/refresh", {});
             } catch (err) {
-                return (<div><h1>서버와 {err.code} 오류가 발생했습니다.</h1><br/>
-                <Button onClick={navigate("/")} label={"홈으로"}/></div>)
+                console.error("refresh 실패:", err);
+                navigate("/");
             }
-        }, 1000 * 60 * 5); // 5분마다 refresh
+        }, 1000 * 60 * 5);
+
         return () => clearInterval(interval);
     }, [dispatch, navigate]);
 }

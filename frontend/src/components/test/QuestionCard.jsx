@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { stopAudio, startAudio } from "@/redux/slices/audioSlice";
 import speaker from "@/assets/speaker.png"
-
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 const QuestionCard = ({
                           questionData,
                           currentIndex,
@@ -68,12 +68,18 @@ const QuestionCard = ({
         }
     };
 
-    if (!questionData) return null;
+    if (!questionData) {
+        return (
+            <div className="flex flex-col justify-center items-center my-10">
+                <LoadingSpinner message="문제 불러오는 중" />
+            </div>
+        );
+    }
 
     return (
         <div
             className="question-card"
-            style={{ background: "rgba(255, 255, 255, 0.3)", border: "1px solid #ddd", padding: "30px", borderRadius: "8px", width: "100%" }}
+            style={{ background: "rgba(255, 255, 255, 0.9)", border: "1px solid #ddd", padding: "30px", borderRadius: "8px", width: "100%" }}
         >
             {/* 문단 + 질문 */}
             <div style={{ marginBottom: "10px", display: "flex", flexDirection: "column"}}>
@@ -95,8 +101,8 @@ const QuestionCard = ({
                     }}>
                         <span style={{ flex: 1, whiteSpace: "pre-line" }}>
                             {questionData.paragraph
-                            ? questionData.paragraph
-                            : questionData.blank_sentence}
+                                ? questionData.paragraph
+                                : questionData.blank_sentence}
                         </span>
                         <img
                             src = {speaker}
