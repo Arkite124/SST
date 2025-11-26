@@ -7,7 +7,6 @@ const instance = axios.create({
     withCredentials: true, // 쿠키 포함 필수!
 });
 
-
 // refresh 요청 중인지 상태 저장 (전역 변수)
 let isRefreshing = false;
 
