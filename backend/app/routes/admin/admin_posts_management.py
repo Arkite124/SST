@@ -7,7 +7,7 @@ from models import ReadingLogs, DailyWritings, ReadingForumPosts, Users, ParentF
 from pydantic import BaseModel
 from datetime import datetime
 
-router = APIRouter(prefix="/admin/users/posts", tags=["Admin User Posts"])
+router = APIRouter(prefix="/admin/users", tags=["Admin User Posts"])
 # -------------------------------
 # 📘 검색 결과 Response Schema
 # -------------------------------
@@ -74,7 +74,7 @@ class AdminPostItem(BaseModel):
 # 특정 유저의 전체 글 가져오기
 # -------------------------------
 @router.get(
-    "/{user_id}",
+    "/posts/{user_id}",
     response_model=List[AdminPostItem],
     summary="관리자 - 특정 사용자의 전체 게시물 조회",
     description="""

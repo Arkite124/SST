@@ -674,7 +674,7 @@ Depth 규칙
 
 대댓글(2 depth): reply_id = 부모 댓글 ID
 
- 3 depth 이상 금지: 대댓글에 또 대댓글 작성 시 차단
+3 depth 이상(대대댓글) 금지: 대댓글에 또 대댓글 작성 시 차단
 
 주요 기능
 로그인한 사용자 본인만 작성 가능
@@ -725,3 +725,134 @@ db: Session = Depends(get_db),
     updated_at=new_comment.updated_at,
     user=UserNickname.from_orm(new_comment.user),
     )
+# -------------------------------------------------
+# 댓글 수정 (작성자 본인만)
+# -------------------------------------------------
+@router.patch(
+    "/comments/{comment_id}",
+    response_model=ReadingForumCommentRead,
+    summary="독서토론 댓글 수정",
+    description="""
+특정 댓글 또는 대댓글을 수정합니다.
+
+---
+
+## 🔐 권한
+- **작성자 본인만 수정 가능**
+
+---
+
+## 수정 가능 항목
+- content (댓글 본문)
+
+---
+
+## 요청 예시
+```json
+{
+  "content": "수정된 댓글 내용입니다."
+}
+### 응답 예시
+```json
+{
+  "id": 10,
+  "post_id": 1,
+  "reply_id": null,
+  "content": "수정된 댓글입니다.",
+  "user": { "id": 3, "nickname": "책읽는엄마" },
+  "has_replies": true
+}
+"""
+)
+def update_comment(
+    comment_id: int,
+    request: ReadingForumCommentUpdate,
+    user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user :
+        raise HTTPException(status_code=401,detail="로그인을 해주세요.")
+    comment = (
+    db.query(ReadingForumComments)
+    .options(joinedload(ReadingForumComments.user))
+    .filter(ReadingForumComments.id == comment_id)
+    .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=404, detail="댓글이 존재하지 않습니다.")
+
+    # 본인만 가능
+    if comment.user_id != user.id:
+        raise HTTPException(status_code=403, detail="댓글 수정 권한이 없습니다.")
+
+    # 수정 내용 반영
+    if request.content is not None:
+        comment.content = request.content
+
+    comment.updated_at = datetime.now()
+    db.commit()
+    db.refresh(comment)
+
+    # 대댓글이 있는지 여부 체크
+    has_replies = db.query(ReadingForumComments).filter(
+        ReadingForumComments.reply_id == comment.id
+    ).count() > 0
+
+    return ReadingForumCommentRead(
+        id=comment.id,
+        post_id=comment.post_id,
+        reply_id=comment.reply_id,
+        content=comment.content,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+        user=UserNickname.from_orm(comment.user),
+        has_replies=has_replies
+    )
+# -------------------------------------------------
+# 댓글 삭제 (작성자 본인만)
+# -------------------------------------------------
+
+@router.delete(
+"/comments/{comment_id}",
+summary="독서토론 댓글 삭제",
+description="""
+특정 댓글 또는 대댓글을 삭제합니다.
+
+🔐 권한
+
+작성자 본인만 삭제 가능
+
+삭제 시 주의사항
+
+댓글 삭제 시 하위 대댓글도 함께 삭제됨 (DB cascade)
+
+응답 예시
+{
+  "success": true
+}
+
+"""
+)
+def delete_comment(
+    comment_id: int,
+    user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user :
+        raise HTTPException(status_code=401,detail="로그인을 해주세요.")
+    comment = (
+    db.query(ReadingForumComments)
+    .filter(ReadingForumComments.id == comment_id)
+    .first()
+    )
+
+    if not comment:
+        raise HTTPException(status_code=404, detail="댓글이 존재하지 않습니다.")
+
+    if comment.user_id != user.id:
+        raise HTTPException(status_code=403, detail="댓글 삭제 권한이 없습니다.")
+
+    db.delete(comment)
+    db.commit()
+
+    return {"success": True}
