@@ -1,20 +1,25 @@
 from datetime import datetime
 from typing import Optional, List
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import aliased,joinedload
-from sqlalchemy import func,or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 
-from app.routes.forum.student import ReadingForumPostRead
-from app.routes.login.login import profile_data, get_current_user
 from data.postgresDB import SessionLocal
-from models import ParentForumPosts as ParentForumPost, Users, ParentForumPosts
+from models import (
+    ParentForumPosts,
+    ParentForumComments,
+    Users
+)
+from app.routes.login.login import get_current_user
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
-load_dotenv()  # .env 파일 자동 로드
 
-router = APIRouter()
+router = APIRouter(prefix="/communities/parent", tags=["parent-forum"])
 
+
+# ===============================================================
+# DB 연결
+# ===============================================================
 def get_db():
     db = SessionLocal()
     try:
@@ -22,130 +27,122 @@ def get_db():
     finally:
         db.close()
 
-# 대댓글 트리구조
-def get_children_level2(db, parent_id: int):
-    """대댓글(2 depth)까지 조회 — 최신순 DESC"""
-    level1 = (
-        db.query(ParentForumPost)
-        .filter(ParentForumPost.parent_id == parent_id)
-        .order_by(ParentForumPost.created_at.desc())   # ← 변경됨!
-        .all()
-    )
 
-    result = []
-    for comment in level1:
-        # 🔥 대댓글(2 depth)
-        level2 = (
-            db.query(ParentForumPost)
-            .filter(ParentForumPost.parent_id == comment.id)
-            .order_by(ParentForumPost.created_at.desc())  # ← 변경됨!
-            .all()
-        )
+# ===============================================================
+# SCHEMAS
+# ===============================================================
 
-        result.append(
-            ParentForumPostRead(
-                id=comment.id,
-                parent_id=comment.parent_id,
-                title=comment.title,
-                content=comment.content,
-                category=comment.category,
-                is_important=comment.is_important,
-                created_at=comment.created_at,
-                updated_at=comment.updated_at,
-                user=comment.user,
-                comment_count=len(level2),
-                children=[
-                    ParentForumPostRead(
-                        id=reply.id,
-                        parent_id=reply.parent_id,
-                        title=reply.title,
-                        content=reply.content,
-                        category=reply.category,
-                        is_important=reply.is_important,
-                        created_at=reply.created_at,
-                        updated_at=reply.updated_at,
-                        user=reply.user,
-                        comment_count=0,
-                        children=[]
-                    )
-                    for reply in level2
-                ]
-            )
-        )
-    return result
+# ▶ 유저 정보 스키마
 class UserNickname(BaseModel):
-    id:int
+    id: int
     nickname: str
 
     class Config:
         from_attributes = True
 
-# ✅ 글 생성 요청용
-class ParentForumPostCreate(BaseModel):
-    user_id: int
-    parent_id: Optional[int] = None
-    title: Optional[str] = None
+
+# ▶ 게시글 생성 요청
+class PostCreate(BaseModel):
+    title: str
     content: str
-    category: Optional[str] = None
+    category: str  # parenting, counseling, concern, education, health, etc.
     is_important: Optional[bool] = False
 
-# ✅ 글 수정 요청용
-class ParentForumPostUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
-    category: Optional[str] = None
-    is_important: Optional[bool] = None
 
-# ✅ 글 조회 응답용 (User 정보까지 포함)
-class ParentForumPostRead(BaseModel):
-    id: int
-    parent_id: Optional[int] = None
-    title: Optional[str] = None
-    content: str
+# ▶ 게시글 수정 요청
+class PostUpdate(BaseModel):
+    title: Optional[str]
+    content: Optional[str]
     category: Optional[str]
-    is_important: bool
+    is_important: Optional[bool]
+
+
+# ▶ 댓글 생성 요청
+class CommentCreate(BaseModel):
+    post_id: int
+    reply_id: Optional[int] = None  # 댓글이면 None, 대댓글이면 댓글ID
+    content: str
+
+# ▶ 댓글 수정 요청
+class CommentUpdate(BaseModel):
+    content: str
+
+# ▶ 조회 응답 구조
+class CommentRead(BaseModel):
+    id: int
+    post_id: int
+    reply_id: Optional[int]
+    content: str
     created_at: datetime
     updated_at: datetime
-    children: List["ParentForumPostRead"] = Field(default_factory=list)  # ✅ 안전한 기본값
     user: UserNickname
-    comment_count: int = 0
+    has_replies: bool = False   # ← 대댓글 확인여부(없으면 false, 있으면 true)
 
     class Config:
         from_attributes = True
 
-# ForwardRef 갱신
-ParentForumPostRead.model_rebuild()
+class ParentForumPostRead(BaseModel):
+    id: int
+    title: str
+    content: str
+    category: str
+    is_important: bool
+    created_at: datetime
+    updated_at: datetime
+    comment_count: int
+    user: UserNickname
 
+    class Config:
+        from_attributes = True
+
+CommentRead.model_rebuild()
+
+# ▶ 부모 게시글 리스트 응답
 class ParentForumPostListResponse(BaseModel):
     total: int
     page: int
     size: int
     items: List[ParentForumPostRead]
 
+class CommentListResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: List[CommentRead]
 
-@router.get("/posts", response_model=ParentForumPostListResponse)
-def get_posts(
-    category: Optional[str] = None,
-    page: int = Query(1, ge=1, description="페이지 번호"),
-    size: int = Query(10, ge=1, le=20, description="한 페이지당 게시글 수"),
-    db: Session = Depends(get_db),
-    summary="학부모 게시판 게시글 조회",
+# ===============================================================
+# 📌 1. 게시글 리스트 조회
+# ===============================================================
+@router.get(
+    "/posts",
+    response_model=ParentForumPostListResponse,
+    summary="학부모 게시판 게시글(최상위 부모글) 목록 조회",
     description="""
-학부모 게시판의 **부모 글(최상위 게시글)** 목록을 페이지네이션 형태로 조회합니다.
+학부모 게시판의 **부모 게시글 목록을 페이지네이션 형태로 조회**합니다.
 
-### 주요 기능
-- 페이지 번호(page)와 페이지 크기(size)를 기준으로 게시글을 조회합니다.
-- `parent_id`가 NULL인 **부모 글만 조회**합니다.
-- 각 게시글에 포함된 **댓글 수(comment_count)** 를 함께 계산합니다.
-- 옵션으로 `category` 필터를 사용할 수 있습니다.
-- 결과는 `total`, `page`, `size`, `items` 구조로 반환됩니다.
+---
 
-###  Query Parameters
-- **page (int)** — 페이지 번호 (기본값: 1)
-- **size (int)** — 한 페이지당 가져올 게시글 수 (기본값: 10)
-- **category (str | Optional)** — 특정 카테고리로 필터링 (예: "system", "payment", "etc")
+## 🔍 조회 기능 설명
 
-###  Response Example
+- `parent_forum_posts` 테이블의 **부모글(=게시글)** 만 조회합니다.
+- `category` 값으로 필터링할 수 있습니다.
+- 각 게시글에는 **댓글 개수(comment_count)** 를 함께 반환합니다.
+- 최신순(created_at DESC)으로 정렬됩니다.
+
+---
+
+## 📌 Query Parameters
+
+| 파라미터 | 타입 | 설명 |
+|---------|------|------|
+| `page` | int | 조회할 페이지 번호 (기본값 1) |
+| `size` | int | 한 페이지당 게시글 수 (기본값 10) |
+| `category` | str | 영문 카테고리: parenting(육아), counseling(상담), concern(고민), education(교육), health(건강), etc(기타) |
+
+---
+
+## 📌 Response Example (옵션 1: 매우 상세)
+
 ```json
 {
   "total": 52,
@@ -154,106 +151,124 @@ def get_posts(
   "items": [
     {
       "id": 1,
-      "title": "공지사항",
-      "content": "중요 공지입니다.",
-      "category": "system",
-      "is_important": true,
-      "comment_count": 3,
-      "user": { "nickname": "관리자" },
+      "title": "육아 스트레스 공유합니다",
+      "content": "요즘 너무 힘들어요...",
+      "category": "parenting",
+      "is_important": false,
       "created_at": "2025-01-01T12:00:00",
-      "updated_at": "2025-01-01T12:00:00"
+      "updated_at": "2025-01-01T12:00:00",
+      "comment_count": 3,
+      "user": {
+        "id": 3,
+        "nickname": "행복맘"
+      }
     }
   ]
-}"""
-):
-    """
-    학부모 게시판 게시글 목록 조회 엔드포인트
-    """
-    offset = (page - 1) * size
-    comment = aliased(ParentForumPost)
-
-    # ✅ 총 게시글 수 (부모글만 + 카테고리 조건 적용)
-    total_query = db.query(func.count(ParentForumPost.id)).filter(
-        ParentForumPost.parent_id == None
-    )
-    if category:
-        total_query = total_query.filter(ParentForumPost.category == category)
-    total = total_query.scalar()
-
-    # ✅ 댓글 수 포함된 subquery
-    subq = (
-        db.query(
-            ParentForumPost.id.label("post_id"),
-            func.count(comment.id).label("comment_count")
-        )
-        .outerjoin(comment, comment.parent_id == ParentForumPost.id)
-        .filter(ParentForumPost.parent_id == None)
-        .group_by(ParentForumPost.id)
-        .subquery()
-    )
-
-    # ✅ 본문 조회
-    query = (
-        db.query(ParentForumPost, subq.c.comment_count)
-        .join(subq, subq.c.post_id == ParentForumPost.id)
-        .filter(ParentForumPost.parent_id == None)
-        .options(joinedload(ParentForumPost.user))
-        .order_by(ParentForumPost.created_at.desc())
-        .offset(offset)
-        .limit(size)
-    )
-
-    if category:
-        query = query.filter(ParentForumPost.category == category)
-
-    results = query.all()
-
-    # 🔥 변환
-    items = [
-        ParentForumPostRead(
-            id=post.id,
-            title=post.title,
-            parent_id=post.parent_id,
-            content=post.content,
-            category=post.category,
-            is_important=post.is_important,
-            created_at=post.created_at,
-            updated_at=post.updated_at,
-            comment_count=comment_count,
-            user=post.user
-        )
-        for post, comment_count in results
-    ]
-
-    # 🔥 최종 응답
-    return {
-        "total": total,
-        "page": page,
-        "size": size,
-        "items": items
-    }
-
-@router.get(
-    "/posts/{post_id}",
-    response_model=ParentForumPostRead,
-    summary="학부모 게시판 게시글 상세 조회",
-    description="""
-특정 게시글을 ID로 조회합니다.
-
-### 주요 기능
-- 게시글 데이터 + 작성자 정보 포함
-- 존재하지 않을 경우 404 반환
+}
 """
 )
-def get_post(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(ParentForumPost).filter(ParentForumPost.id == post_id).first()
+def get_posts(
+    category: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=20),
+    db: Session = Depends(get_db),
+):
+    offset = (page - 1) * size
+
+    query = db.query(ParentForumPosts)
+    if category:
+        query = query.filter(ParentForumPosts.category == category)
+
+    total = query.count()
+
+    posts = (
+        query.order_by(ParentForumPosts.created_at.desc())
+        .offset(offset)
+        .limit(size)
+        .options(joinedload(ParentForumPosts.user))
+        .all()
+    )
+
+    items = []
+    for post in posts:
+        comment_count = (
+            db.query(func.count(ParentForumComments.id))
+            .filter(ParentForumComments.post_id == post.id)
+            .scalar()
+        )
+
+        items.append(
+            ParentForumPostRead(
+                id=post.id,
+                title=post.title,
+                content=post.content,
+                category=post.category,
+                is_important=post.is_important,
+                created_at=post.created_at,
+                updated_at=post.updated_at,
+                user=UserNickname.model_config(post.user),
+                comment_count=comment_count,
+            )
+        )
+
+    return {"total": total, "page": page, "size": size, "items": items}
+
+# ===============================================================
+# 📌 2. 게시글 상세 조회
+# ===============================================================
+
+@router.get(
+"/posts/{post_id}",
+response_model=ParentForumPostRead,
+summary="게시글 상세 조회 + 댓글 트리(depth 2)",
+description="""
+특정 게시글의 전체 내용을 조회합니다.
+또한 댓글 + 대댓글(depth = 2) 트리 구조로 함께 반환합니다.
+
+Response 포함 데이터
+
+게시글 본문(title, content, category 등)
+
+작성자 정보(user)
+
+댓글 목록(depth 2까지)
+
+총 댓글 수(comment_count)
+
+Response Example
+{
+  "id": 1,
+  "title": "육아 스트레스 공유합니다",
+  "content": "요즘 너무 힘드네요...",
+  "category": "parenting",
+  "is_important": false,
+  "comment_count": 2,
+  "user": {
+    "id": 3,
+    "nickname": "행복맘"
+  }
+}
+"""
+)
+def get_post_detail(post_id: int, db: Session = Depends(get_db)):
+    post = (
+        db.query(ParentForumPosts)
+        .filter(ParentForumPosts.id == post_id)
+        .options(joinedload(ParentForumPosts.user))
+        .first()
+    )
+
     if not post:
-        raise HTTPException(status_code=404, detail={"성공여부": False, "이유": "존재하지 않는 게시물입니다."})
-    # 댓글(1 depth) + 대댓글(2 depth)
-    children = get_children_level2(db, post.id)
+        raise HTTPException(status_code=404, detail="존재하지 않는 게시글입니다.")
+
+    comment_count = (
+        db.query(func.count(ParentForumComments.id))
+        .filter(ParentForumComments.post_id == post_id)
+        .scalar()
+    )
+
     return ParentForumPostRead(
         id=post.id,
-        parent_id=post.parent_id,
         title=post.title,
         content=post.content,
         category=post.category,
@@ -261,128 +276,90 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
         created_at=post.created_at,
         updated_at=post.updated_at,
         user=post.user,
-        comment_count=len(children),
-        children=children
+        comment_count=comment_count
     )
-@router.get(
-    "/posts/search",
-    response_model=list[ParentForumPostRead],
-    summary="학부모 게시판 게시글 검색",
-    description="""
-제목 또는 내용에 특정 단어가 포함된 학부모 게시판의 부모 게시글을 검색합니다.
 
-### 주요 기능
-- **부모 게시글(parent_id IS NULL)** 만 검색 대상
-- 제목(`title`) + 내용(`content`) 모두 검색
-- 중복 제거 후 `created_at` 기준 최신순 정렬
-- 댓글/대댓글은 포함되지 않고, 게시글 목록만 반환
-
-### Query Parameters
-- **word (str)** — 검색어 (제목/내용에 포함되는 문자열)
-
-### Response Example
-```json
-[
-  {
-    "id": 10,
-    "parent_id": null,
-    "title": "결제 관련 문의",
-    "content": "정기결제 변경이 가능한가요?",
-    "category": "payment",
-    "is_important": false,
-    "created_at": "2025-01-10T12:00:00",
-    "updated_at": "2025-01-10T12:00:00",
-    "comment_count": 3,
-    "user": {
-      "id": 3,
-      "nickname": "김학부모"
-    },
-    "children": []
-  }
-]
-"""
-)
-def search_parents_posts(
-word: str = Query(..., description="제목/내용에 포함될 검색어"),
-db: Session = Depends(get_db),
-):
- # 부모글만 대상
-    base_query = db.query(ParentForumPost).filter(ParentForumPost.parent_id == None)
-    # 제목/내용 둘 다 검색 (OR 조건)
-    posts = (
-        base_query
-        .filter(
-            or_(
-                ParentForumPost.title.contains(word),
-                ParentForumPost.content.contains(word),
-            )
-        )
-        .order_by(ParentForumPost.created_at.desc())
-        .options(joinedload(ParentForumPost.user))
-        .all()
-    )
-    # ParentForumPostRead(from_attributes=True) 덕분에 ORM 리스트 그대로 반환 가능
-    return posts
+# ===============================================================
+# 📌 3. 게시글 작성
+# ===============================================================
 
 @router.post(
-    "/posts",
-    response_model=ParentForumPostCreate,
-    summary="학부모 게시판 게시글 작성",
-    description="""
-새로운 부모 게시글 또는 답글(부모 ID 존재 시)을 생성합니다.
+"/posts",
+summary="게시글 작성",
+description="""
+새로운 게시글을 작성합니다.
 
-### 주요 기능
-- 로그인한 사용자만 생성 가능
-- 카테고리, 중요글 여부 설정 가능
+권한
+
+로그인한 사용자만 작성 가능
+
+카테고리 목록
+category	설명
+parenting	육아
+counseling	상담
+concern	    고민
+education	교육
+health	    건강
+etc      	기타
+Request Example
+{
+  "title": "아이 수면 패턴이 고민이에요",
+  "content": "밤에 자주 깨서 너무 힘들어요.",
+  "category": "parenting",
+  "is_important": false
+}
 """
 )
 def create_post(
-    request: ParentForumPostCreate,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
+request: PostCreate,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
 ):
     if not user:
-        raise HTTPException(status_code=401,detail={"message":"사용 권한이 없습니다."})
-    if not request.title or request.title == " ":
-        raise HTTPException(status_code=400,detail={"message":"제목을 입력해주세요."})
-    new_post = ParentForumPost(
-        user_id=user.id,
-        title=request.title,
-        content=request.content,
-        category=request.category,
-        is_important=request.is_important,
-        parent_id=request.parent_id
+        raise HTTPException(status_code=401, detail="로그인 해주세요. 작성할 권한이 없습니다.")
+    new_post = ParentForumPosts(
+    user_id=user.id,
+    title=request.title,
+    content=request.content,
+    category=request.category,
+    is_important=request.is_important,
     )
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
     return new_post
 
-@router.patch(
-    "/posts/{post_id}",
-    response_model=ParentForumPostUpdate,
-    summary="학부모 게시판 게시글 수정",
-    description="""
-특정 게시글의 내용을 수정합니다.
+# ===============================================================
+# 📌 4. 게시글 수정
+# ===============================================================
 
-### 주요 기능
-- 작성자 본인만 수정 가능
-- 제목, 내용, 중요 여부, 카테고리 개별 수정 가능
+@router.patch(
+"/posts/{post_id}",
+summary="게시글 수정",
+description="""
+게시글을 수정합니다.
+
+✔ 작성자 본인만 수정 가능
+✔ 제목·내용·카테고리 개별 수정 가능
+
 """
 )
 def update_post(
-    request: ParentForumPostUpdate,
-    post_id: int,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
+post_id: int,
+request: PostUpdate,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
 ):
-    user_id=user.id
-    post = db.query(ParentForumPost).filter(ParentForumPost.id == post_id).first()
+    post = db.query(ParentForumPosts).filter(ParentForumPosts.id == post_id).first()
+
     if not post:
-        raise HTTPException(status_code=404, detail={"성공여부": False, "이유": "존재하지 않는 게시물입니다."})
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    if post.user_id != user.id:
+        raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+
     updated = False
-    if not user_id == post.user_id:
-        raise HTTPException(status_code=401,detail="다른유저의 게시글 편집 금지")
+
     if request.title is not None:
         post.title = request.title
         updated = True
@@ -392,192 +369,403 @@ def update_post(
     if request.category is not None:
         post.category = request.category
         updated = True
-    if request.is_important is not None:
-        post.is_important = request.is_important
-        updated = True
+    if request.is_important is False:
+        post.is_important = False
 
     if updated:
         post.updated_at = datetime.now()
         db.commit()
         db.refresh(post)
-        return post
-    return {"로그": "수정될 것이 없거나 실패했습니다."}
 
-# ✅ 댓글 생성
-@router.post(
-    "/comments",
-    response_model=ParentForumPostRead,
-    summary="학부모 게시판 댓글 / 대댓글 작성",
+    return post
+
+# ===============================================================
+# 📌 5. 게시글 삭제
+# ===============================================================
+@router.delete(
+"/posts/{post_id}",
+summary="게시글 삭제",
+description="""
+게시글을 삭제합니다.
+
+✔ 작성자 본인만 삭제 가능
+✔ 댓글도 함께 삭제 (DB cascade 적용)
+
+"""
+)
+def delete_post(
+post_id: int,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
+):
+    post = db.query(ParentForumPosts).filter(ParentForumPosts.id == post_id).first()
+
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    if post.user_id != user.id:
+        raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+
+    db.delete(post)
+    db.commit()
+    return {"success": True}
+# ===============================================================
+# 6. 댓글 목록 출력
+# ===============================================================
+@router.get(
+    "/posts/{post_id}/comments",
+    response_model=CommentListResponse,
+    summary="게시글의 1단계 댓글 목록 조회 (reply_id = NULL + 페이지네이션)",
     description="""
-특정 게시글 또는 댓글에 댓글을 작성합니다.
+    게시글의 **1단계 댓글(reply_id = null)** 만 조회합니다.  
+    대댓글은 포함되지 않으며, 각 댓글은 **대댓글 존재 여부(has_replies)** 를 함께 반환합니다.
 
-### 주요 기능
-- **게시글 ID(parent_id)가 부모이면 → 댓글(1 depth) 작성**
-- **댓글 ID(parent_id)가 부모이면 → 대댓글(2 depth) 작성**
-- **대대댓글(3 depth 이상)은 작성 불가 (서버에서 차단)**  
-- 로그인한 사용자만 작성 가능
-- 댓글과 대댓글 모두 제목 입력 가능
-- 부모 게시글 또는 댓글이 존재하는지 확인 후 작성
+    ---
 
-### 요청 파라미터
-- **parent_id (int)** : 댓글을 달 부모의 ID  
-    - 게시글 ID → 댓글  
-    - 댓글 ID → 대댓글  
+    ## 기능 설명
+    - reply_id = NULL 인 댓글만 조회 (즉, 상위 댓글)
+    - 페이지네이션 지원
+    - 각 댓글은 `has_replies` 필드 포함 → 대댓글 유무를 프론트에서 판단 가능
+    - 정렬: 최신순(created_at DESC)
 
-### Request Body 예시
-```json
+    ---
+
+    ## Query Parameters
+    |  파라미터  |  타입  |  설명  |
+    |---------|------|------|
+    |  `page`  |  int  | 페이지 번호 (기본: 1) |
+    |  `size`  |  int  | 페이지당 개수 (기본: 10) |
+
+    ---
+
+    ## 응답 예시
+    ```json
+    {
+      "total": 5,
+      "page": 1,
+      "size": 10,
+      "items": [
+        {
+          "id": 10,
+          "post_id": 1,
+          "reply_id": null,
+          "content": "저도 공감합니다!",
+          "created_at": "2025-01-01T12:00:00",
+          "updated_at": "2025-01-01T12:00:00",
+          "user": { "id": 4, "nickname": "행복맘" },
+          "has_replies": true
+        },
+        {
+          "id": 14,
+          "post_id": 1,
+          "reply_id": null,
+          "content": "힘내세요!",
+          "created_at": "2025-01-02T10:10:00",
+          "updated_at": "2025-01-02T10:10:00",
+          "user": { "id": 5, "nickname": "희망아빠" },
+          "has_replies": false
+        }
+      ]
+    }
+    """
+)
+def get_parent_comments(
+    post_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    post = db.query(ParentForumPosts).filter(ParentForumPosts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
+
+    offset = (page - 1) * size
+
+    base_query = db.query(ParentForumComments).filter(
+        ParentForumComments.post_id == post_id,
+        ParentForumComments.reply_id.is_(None)
+    )
+
+    total = base_query.count()
+
+    comments = (
+        base_query
+        .order_by(ParentForumComments.created_at.desc())
+        .offset(offset)
+        .limit(size)
+        .options(joinedload(ParentForumComments.user))
+        .all()
+    )
+
+    # ✔ 상위 댓글마다 대댓글이 존재하는지 체크
+    comment_responses = []
+    for c in comments:
+        has_replies = db.query(ParentForumComments).filter(
+            ParentForumComments.reply_id == c.id
+        ).count() > 0
+
+        comment_responses.append(
+            CommentRead(
+                id=c.id,
+                post_id=c.post_id,
+                reply_id=c.reply_id,
+                content=c.content,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+                user=c.user,
+                has_replies=has_replies
+            )
+        )
+    return CommentListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=comment_responses
+    )
+# ===============================================================
+# 7. 대댓글 목록 출력
+# ===============================================================
+@router.get(
+    "/posts/{post_id}/comments/{comment_id}/replies",
+    response_model=CommentListResponse,
+    summary="특정 댓글의 대댓글 목록 조회 (reply_id = comment_id + 페이지네이션)",
+    description="""
+    특정 댓글에 달린 **대댓글(reply_id = 해당 comment_id)** 목록을 페이지네이션 형태로 조회합니다.  
+    대댓글은 2단계까지만 존재하며, 대대댓글은 허용되지 않습니다.
+
+    ---
+
+    ##  기능 설명
+    - reply_id = comment_id 인 대댓글만 조회
+    - 페이지네이션 지원
+    - 정렬: 오래된 순(created_at ASC)
+    - 대댓글은 더 이상 하위 댓글이 없으므로 has_replies = false
+
+    ---
+
+    ## Query Parameters
+    | 파라미터 | 타입 | 설명 |
+    |---------|------|------|
+    | `page` | int | 페이지 번호 (기본: 1) |
+    | `size` | int | 페이지당 개수 (기본: 10) |
+
+    ---
+
+    ## 응답 예시
+    ```json
+    {
+      "total": 2,
+      "page": 1,
+      "size": 10,
+      "items": [
+        {
+          "id": 21,
+          "post_id": 1,
+          "reply_id": 10,
+          "content": "힘내세요! 공감해요.",
+          "created_at": "2025-01-02T12:00:00",
+          "updated_at": "2025-01-02T12:00:00",
+          "user": { "id": 6, "nickname": "행복아빠" },
+          "has_replies": false
+        },
+        {
+          "id": 25,
+          "post_id": 1,
+          "reply_id": 10,
+          "content": "저도 같은 고민이에요.",
+          "created_at": "2025-01-02T13:00:00",
+          "updated_at": "2025-01-02T13:00:00",
+          "user": { "id": 7, "nickname": "사랑맘" },
+          "has_replies": false
+        }
+      ]
+    }
+    """
+)
+def get_replies(
+    post_id: int,
+    comment_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    # 게시글 존재 여부 체크
+    post = db.query(ParentForumPosts).filter(ParentForumPosts.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
+
+    # parent comment 체크
+    parent_comment = db.query(ParentForumComments).filter(
+        ParentForumComments.id == comment_id
+    ).first()
+
+    if not parent_comment:
+        raise HTTPException(status_code=404, detail="댓글이 존재하지 않습니다.")
+
+    offset = (page - 1) * size
+
+    base_query = db.query(ParentForumComments).filter(
+        ParentForumComments.post_id == post_id,
+        ParentForumComments.reply_id == comment_id
+    )
+
+    total = base_query.count()
+
+    replies = (
+        base_query
+        .order_by(ParentForumComments.created_at.asc())
+        .offset(offset)
+        .limit(size)
+        .options(joinedload(ParentForumComments.user))
+        .all()
+    )
+    # 대댓글은 has_replies = False (3단계 금지)
+    reply_responses = [
+        CommentRead(
+            id=c.id,
+            post_id=c.post_id,
+            reply_id=c.reply_id,
+            content=c.content,
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            user=c.user,
+            has_replies=False
+        )
+        for c in replies
+    ]
+
+    return CommentListResponse(
+        total=total,
+        page=page,
+        size=size,
+        items=reply_responses
+    )
+
+# ===============================================================
+# 8. 댓글 작성 (댓글 + 대댓글)
+# ===============================================================
+
+@router.post(
+"/comments",
+summary="댓글 / 대댓글 작성",
+description="""
+댓글 또는 대댓글을 작성합니다.
+Depth 규칙
+유형	설명	reply_id로 구분
+댓글(1단계)	게시글에 작성	null
+대댓글(2단계)	댓글에 작성	댓글 ID
+3단계 금지	대댓글에 또 달기	차단
+3 depth 차단 예시
+
+댓글(ID=10)에 대댓글(ID=20) 작성 → 허용
+
+대댓글(ID=20)에 또 댓글 달기 → ❌ 오류
+Request Example
 {
-  "user_id": 1,
-  "title": "문의드립니다",
-  "content": "답변 부탁드립니다.",
-  "category": "system"
+  "post_id": 1,
+  "reply_id": 10,
+  "content": "저도 공감합니다!"
 }
-응답 구조
-작성된 댓글 또는 대댓글의 정보 반환
+
 """
 )
 def create_comment(
-    parent_id: int,
-    request: ParentForumPostCreate,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
+request: CommentCreate,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
 ):
-    # 1) 부모 확인
-    parent_post = db.query(ParentForumPost).filter(ParentForumPost.id == parent_id).first()
-    if not parent_post:
-        raise HTTPException(status_code=404, detail="부모글이 존재하지 않습니다.")
+    # 1) 게시글 존재 여부 체크
+    post = db.query(ParentForumPosts).filter(ParentForumPosts.id == request.post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
 
-    # 2) 로그인 검증
-    if not request.user_id == user.id:
-        raise HTTPException(status_code=401, detail="유저 확인 바랍니다.")
+    # 2) reply_id가 있으면 대댓글
+    if request.reply_id:
+        parent_comment = db.query(ParentForumComments).filter(
+            ParentForumComments.id == request.reply_id
+        ).first()
 
-    # 3) 대대댓글 방지
-    if parent_post.parent_id is not None:
-        # 부모글의 parent_id != None → 부모가 댓글 → request는 대댓글
-        # 근데 부모가 댓글의 부모(=대댓글)라면? → 금지
-        parent_of_parent = parent_post.parent_id
+        if not parent_comment:
+            raise HTTPException(status_code=404, detail="부모 댓글이 존재하지 않습니다.")
 
-        grand_parent = db.query(ParentForumPost).filter(ParentForumPost.id == parent_of_parent).first()
-        if grand_parent and grand_parent.parent_id is not None:
-            raise HTTPException(status_code=400, detail="대댓글까지만 작성 가능합니다.")
+        # 대대댓글 백엔드에서 사전 차단
+        if parent_comment.reply_id is not None:
+            raise HTTPException(status_code=400, detail="대댓글에는 대댓글을 작성할 수 없습니다. (2 depth 제한)")
 
-    # 4) 댓글 / 대댓글 생성
-    new_comment = ParentForumPost(
+    new_comment = ParentForumComments(
+        post_id=request.post_id,
+        reply_id=request.reply_id,
         user_id=user.id,
-        content=request.content,
-        parent_id=parent_id,
+        content=request.content
     )
     db.add(new_comment)
     db.commit()
     db.refresh(new_comment)
-
     return new_comment
 
+# ===============================================================
+# 9. 댓글 수정
+# ===============================================================
 
-# ✅ 특정 부모글의 댓글 리스트 조회
-@router.get(
-    "/comments/{parent_id}",
-    response_model=list[ParentForumPostRead],
-    summary="학부모 게시판 댓글 목록 조회",
-    description="""
-특정 부모 게시글에 달린 댓글 목록을 조회합니다.
-
-### 주요 기능
-- 최신순 대로 정렬
-- 부모 ID 기반 댓글 조회
-"""
-)
-def get_comments(
-    parent_id: int,
-    db: Session = Depends(get_db)
-):
-    comments = (
-        db.query(ParentForumPost)
-        .filter(ParentForumPost.parent_id == parent_id)
-        .order_by(ParentForumPost.created_at.desc())
-        .all()
-    )
-    return comments
-
-# ✅ 댓글 수정
 @router.patch(
-    "/comments/{comment_id}",
-    response_model=ParentForumPostUpdate,
-    summary="학부모 게시판 댓글 수정",
-    description="""
-특정 댓글을 수정합니다.
+"/comments/{comment_id}",
+summary="댓글 수정",
+description="""
+댓글 내용을 수정합니다.
 
-### 주요 기능
-- 로그인한 사용자 본인만 수정 가능
-- 내용만 수정 가능
-- 수정 시 updated_at 자동 갱신
+✔ 작성자 본인만 수정 가능
+✔ content만 수정 가능
+
 """
 )
 def update_comment(
-    comment_id: int,
-    request: ParentForumPostUpdate,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
+comment_id: int,
+request: CommentUpdate,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
 ):
-    comment = db.query(ParentForumPost).filter(ParentForumPost.id == comment_id).first()
+    comment = db.query(ParentForumComments).filter(ParentForumComments.id == comment_id).first()
+
     if not comment:
-        raise HTTPException(status_code=404, detail="존재하지 않는 댓글입니다.")
-    if not user.id==request.user_id:
-        raise HTTPException(status_code=401,detail="잘못된 접근입니다.")
-    if request.content:
-        comment.content = request.content
-        comment.updated_at = datetime.now()
+        raise HTTPException(status_code=404, detail="댓글이 존재하지 않습니다.")
+
+    if comment.user_id != user.id:
+        raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+
+    comment.content = request.content
+    comment.updated_at = datetime.now()
 
     db.commit()
     db.refresh(comment)
     return comment
 
-# ✅ 댓글 삭제
+# ===============================================================
+# 10. 댓글 삭제
+# ===============================================================
 @router.delete(
-    "/comments/{comment_id}",
-    summary="학부모 게시판 댓글 삭제",
-    description="""
-특정 댓글을 삭제합니다.
+"/comments/{comment_id}",
+summary="댓글 삭제",
+description="""
+댓글을 삭제합니다.
 
-### 주요 기능
-- 댓글 작성자 본인만 삭제 가능
-- 삭제 후 성공 여부 반환
+✔ 작성자 본인만 삭제 가능
+✔ 대댓글도 함께 삭제됨 (cascade)
+
 """
 )
 def delete_comment(
-    comment_id: int,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
+comment_id: int,
+user: Users = Depends(get_current_user),
+db: Session = Depends(get_db)
 ):
-    comment = db.query(ParentForumPost).filter(ParentForumPost.id == comment_id).first()
+    comment = db.query(ParentForumComments).filter(ParentForumComments.id == comment_id).first()
+
     if not comment:
-        raise HTTPException(status_code=404, detail="존재하지 않는 댓글입니다.")
-    if not user.id==comment.user_id:
-        raise HTTPException(status_code=401,detail="잘못된 접근입니다.")
+        raise HTTPException(status_code=404, detail="댓글이 존재하지 않습니다.")
+
+    if comment.user_id != user.id:
+        raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+
     db.delete(comment)
     db.commit()
-    return {"성공여부": True}
-@router.delete(
-    "/posts/{list_id}",
-    summary="학부모 게시판 게시글 삭제",
-    description="""
-특정 게시글을 삭제합니다.
-
-### 주요 기능
-- 작성자 본인만 삭제 가능
-- 삭제 성공 시 `{ "성공여부": true }` 반환
-"""
-)
-def delete_post(
-    list_id: int,
-    user: Users = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    post = db.query(ParentForumPost).filter(ParentForumPost.id == list_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail={"성공여부":False,"이유":"존재하지 않는 게시물입니다."})
-    if not user.id==post.user_id:
-        raise HTTPException(status_code=401,detail="잘못된 접근입니다.")
-    db.delete(post)
-    db.commit()
-    return {"성공여부": True}
+    return {"success": True}

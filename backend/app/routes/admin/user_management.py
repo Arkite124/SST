@@ -9,7 +9,7 @@ from models import UserBans as UserBan, Users
 
 
 # ---------------------------------------------------------
-# 📌 Base Schemas
+# Base Schemas
 # ---------------------------------------------------------
 class UserBanBase(BaseModel):
     user_id: int

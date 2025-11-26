@@ -15,7 +15,7 @@ instance.interceptors.response.use(
     (res) => res,
     async (error) => {
             const originalRequest = error.config;
-            // ❌ 이미 refresh 시도했는데도 또 401 뜨면 무한루프 방지
+            // 이미 refresh 시도했는데도 또 401 뜨면 무한루프 방지
             if (originalRequest._retry) {
                 return Promise.reject(error);
             }
@@ -29,7 +29,6 @@ instance.interceptors.response.use(
                         return instance(originalRequest);
                     } catch (refreshError) {
                         isRefreshing = false;
-                        console.error("리프레시 토큰이 없습니다.");
                         return Promise.reject(refreshError);
                     }
                 }

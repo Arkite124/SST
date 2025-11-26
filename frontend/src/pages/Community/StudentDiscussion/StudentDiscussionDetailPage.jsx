@@ -19,7 +19,7 @@ export default function StudentDiscussionDetailPage() {
                 // axios 응답 구조에 맞게 수정
                 const data = res.data;
                 if (!data || !data.id) {
-                    throw new Error("존재하지 않는 게시글입니다.");
+                    new Error("존재하지 않는 게시글입니다.");
                 }
                 setPost(data);
 
@@ -31,7 +31,6 @@ export default function StudentDiscussionDetailPage() {
                 setLoading(false);
             }
         };
-
         fetchPost();
     }, [id, navigate]);
 

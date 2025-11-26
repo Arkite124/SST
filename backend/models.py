@@ -19,7 +19,6 @@ class SimilarWords(Base):
     base_word = mapped_column(String(100), nullable=False)
     similar_word_list = mapped_column(JSONB)
 
-
 class Users(Base):
     __tablename__ = 'users'
     __table_args__ = (
@@ -47,7 +46,8 @@ class Users(Base):
     profile_img_url = mapped_column(String(255), server_default=text('NULL::character varying'))
     key_parent = mapped_column(String(100), server_default=text('NULL::character varying'))
 
-    customer_support: Mapped[List['CustomerSupport']] = relationship('CustomerSupport', uselist=True, back_populates='user')
+    customer_support_posts: Mapped[List['CustomerSupportPosts']] = relationship('CustomerSupportPosts', uselist=True, back_populates='user')
+    customer_support_comments: Mapped[List['CustomerSupportComments']] = relationship('CustomerSupportComments', uselist=True, back_populates='user')
     daily_writings: Mapped[List['DailyWritings']] = relationship('DailyWritings', uselist=True, back_populates='user')
     parent_forum_posts: Mapped[List['ParentForumPosts']] = relationship('ParentForumPosts', uselist=True, back_populates='user')
     reading_forum_posts: Mapped[List['ReadingForumPosts']] = relationship('ReadingForumPosts', uselist=True, back_populates='user')
@@ -59,31 +59,64 @@ class Users(Base):
     user_tests: Mapped[List['UserTests']] = relationship('UserTests', uselist=True, back_populates='user')
     outputs: Mapped[List['Outputs']] = relationship('Outputs', uselist=True, back_populates='user')
     user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='user')
+    reading_forum_comments: Mapped[List["ReadingForumComments"]] = relationship(
+        "ReadingForumComments", back_populates="user"
+    )
+    parent_forum_comments: Mapped[List["ParentForumComments"]] = relationship(
+        "ParentForumComments", back_populates="user"
+    )
 
-
-class CustomerSupport(Base):
-    __tablename__ = 'customer_support'
+class CustomerSupportPosts(Base):
+    __tablename__ = 'customer_support_posts'
     __table_args__ = (
-        CheckConstraint("status::text = ANY (ARRAY['open'::character varying, 'in_progress'::character varying, 'resolved'::character varying, 'closed'::character varying]::text[])", name='customer_support_status_check'),
-        ForeignKeyConstraint(['parent_id'], ['customer_support.id'], ondelete='CASCADE', name='customer_support_parent_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='customer_support_user_id_fkey'),
-        PrimaryKeyConstraint('id', name='customer_support_pkey')
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        CheckConstraint("status IN ('open','in_progress','resolved','closed')"),
+        PrimaryKeyConstraint('id'),
     )
 
     id = mapped_column(Integer)
     user_id = mapped_column(Integer)
-    parent_id = mapped_column(Integer)
     category = mapped_column(String(50))
     title = mapped_column(String(255))
-    content = mapped_column(Text)
-    status = mapped_column(String(20))
+    content = mapped_column(Text, nullable=False)
+    status = mapped_column(String(20), server_default=text("'open'"))
     created_at = mapped_column(DateTime, server_default=text('now()'))
     updated_at = mapped_column(DateTime, server_default=text('now()'))
 
-    parent: Mapped[Optional['CustomerSupport']] = relationship('CustomerSupport', remote_side=[id], back_populates='parent_reverse')
-    parent_reverse: Mapped[List['CustomerSupport']] = relationship('CustomerSupport', uselist=True, remote_side=[parent_id], back_populates='parent')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='customer_support')
+    user: Mapped["Users"] = relationship("Users", back_populates="customer_support_posts")
 
+    comments: Mapped[List["CustomerSupportComments"]] = relationship(
+        "CustomerSupportComments", back_populates="post", cascade="all, delete-orphan"
+    )
+
+class CustomerSupportComments(Base):
+    __tablename__ = "customer_support_comments"
+    __table_args__ = (
+        ForeignKeyConstraint(['post_id'], ['customer_support_posts.id'], ondelete='CASCADE'),
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        ForeignKeyConstraint(['reply_id'], ['customer_support_comments.id'], ondelete='CASCADE'),
+        PrimaryKeyConstraint('id'),
+    )
+    id = mapped_column(Integer)
+    post_id = mapped_column(Integer, nullable=False)
+    user_id = mapped_column(Integer, nullable=False)
+    reply_id = mapped_column(Integer)
+    content = mapped_column(Text, nullable=False)
+    created_at = mapped_column(DateTime, server_default=text('now()'))
+    updated_at = mapped_column(DateTime, server_default=text('now()'))
+    post = relationship("CustomerSupportPosts", back_populates="comments")
+    user = relationship("Users", back_populates="customer_support_comments")
+    parent = relationship(
+        "CustomerSupportComments",
+        remote_side="CustomerSupportComments.id",
+        back_populates="replies",
+        foreign_keys="CustomerSupportComments.reply_id"
+    )
+    replies = relationship(
+        "CustomerSupportComments",
+        back_populates="parent",
+        foreign_keys="CustomerSupportComments.reply_id"
+    )
 
 class DailyWritings(Base):
     __tablename__ = 'daily_writings'
@@ -105,51 +138,114 @@ class DailyWritings(Base):
     outputs: Mapped[List['Outputs']] = relationship('Outputs', uselist=True, back_populates='content')
     user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='content')
 
-
 class ParentForumPosts(Base):
     __tablename__ = 'parent_forum_posts'
     __table_args__ = (
-        ForeignKeyConstraint(['parent_id'], ['parent_forum_posts.id'], ondelete='CASCADE', name='parent_forum_posts_parent_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='parent_forum_posts_user_id_fkey'),
-        PrimaryKeyConstraint('id', name='parent_forum_posts_pkey')
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        PrimaryKeyConstraint('id'),
     )
 
     id = mapped_column(Integer)
-    content = mapped_column(Text, nullable=False)
-    user_id = mapped_column(Integer)
-    parent_id = mapped_column(Integer)
+    user_id = mapped_column(Integer, nullable=False)
     title = mapped_column(String(255))
-    created_at = mapped_column(DateTime, server_default=text('now()'))
-    updated_at = mapped_column(DateTime, server_default=text('now()'))
+    content = mapped_column(Text, nullable=False)
     category = mapped_column(String(50))
     is_important = mapped_column(Boolean, server_default=text('false'))
+    created_at = mapped_column(DateTime, server_default=text('now()'))
+    updated_at = mapped_column(DateTime, server_default=text('now()'))
 
-    parent: Mapped[Optional['ParentForumPosts']] = relationship('ParentForumPosts', remote_side=[id], back_populates='parent_reverse')
-    parent_reverse: Mapped[List['ParentForumPosts']] = relationship('ParentForumPosts', uselist=True, remote_side=[parent_id], back_populates='parent')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='parent_forum_posts')
+    user: Mapped["Users"] = relationship("Users", back_populates="parent_forum_posts")
 
+    # 🔥 게시글 ↔ 댓글 (1:N)
+    comments: Mapped[List["ParentForumComments"]] = relationship(
+        "ParentForumComments", back_populates="post", cascade="all, delete-orphan"
+    )
+
+class ParentForumComments(Base):
+    __tablename__ = "parent_forum_comments"
+    __table_args__ = (
+        ForeignKeyConstraint(['post_id'], ['parent_forum_posts.id'], ondelete="CASCADE"),
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete="CASCADE"),
+        ForeignKeyConstraint(['reply_id'], ['parent_forum_comments.id'], ondelete="CASCADE"),
+        PrimaryKeyConstraint('id'),
+    )
+
+    id = mapped_column(Integer)
+    post_id = mapped_column(Integer, nullable=False)
+    user_id = mapped_column(Integer, nullable=False)
+    reply_id = mapped_column(Integer)
+    content = mapped_column(Text, nullable=False)
+    created_at = mapped_column(DateTime, server_default=text("now()"))
+    updated_at = mapped_column(DateTime, server_default=text("now()"))
+
+    post = relationship("ParentForumPosts", back_populates="comments")
+    user = relationship("Users", back_populates="parent_forum_comments")
+    parent = relationship(
+        "ParentForumComments",
+        remote_side="ParentForumComments.id",
+        back_populates="replies",
+        foreign_keys="ParentForumComments.reply_id"
+    )
+    replies = relationship(
+        "ParentForumComments",
+        back_populates="parent",
+        foreign_keys="ParentForumComments.reply_id"
+    )
 
 class ReadingForumPosts(Base):
     __tablename__ = 'reading_forum_posts'
     __table_args__ = (
-        ForeignKeyConstraint(['parent_id'], ['reading_forum_posts.id'], ondelete='CASCADE', name='reading_forum_posts_parent_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='reading_forum_posts_user_id_fkey'),
-        PrimaryKeyConstraint('id', name='reading_forum_posts_pkey')
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        PrimaryKeyConstraint('id'),
     )
 
     id = mapped_column(Integer)
-    content = mapped_column(Text, nullable=False)
-    user_id = mapped_column(Integer)
-    parent_id = mapped_column(Integer)
+    user_id = mapped_column(Integer, nullable=False)
     title = mapped_column(String(255))
-    created_at = mapped_column(DateTime, server_default=text('now()'))
-    updated_at = mapped_column(DateTime, server_default=text('now()'))
+    content = mapped_column(Text, nullable=False)
     book_title = mapped_column(String(255))
     discussion_tags = mapped_column(String(100))
+    created_at = mapped_column(DateTime, server_default=text('now()'))
+    updated_at = mapped_column(DateTime, server_default=text('now()'))
 
-    parent: Mapped[Optional['ReadingForumPosts']] = relationship('ReadingForumPosts', remote_side=[id], back_populates='parent_reverse')
-    parent_reverse: Mapped[List['ReadingForumPosts']] = relationship('ReadingForumPosts', uselist=True, remote_side=[parent_id], back_populates='parent')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='reading_forum_posts')
+    user: Mapped["Users"] = relationship("Users", back_populates="reading_forum_posts")
+
+    # 🔥 게시글 ↔ 댓글 (1:N)
+    comments: Mapped[List["ReadingForumComments"]] = relationship(
+        "ReadingForumComments", back_populates="post", cascade="all, delete-orphan"
+    )
+
+class ReadingForumComments(Base):
+    __tablename__ = "reading_forum_comments"
+    __table_args__ = (
+        ForeignKeyConstraint(['post_id'], ['reading_forum_posts.id'], ondelete="CASCADE"),
+        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete="CASCADE"),
+        ForeignKeyConstraint(['reply_id'], ['reading_forum_comments.id'], ondelete="CASCADE"),
+        PrimaryKeyConstraint('id'),
+    )
+
+    id = mapped_column(Integer)
+    post_id = mapped_column(Integer, nullable=False)
+    user_id = mapped_column(Integer, nullable=False)
+    reply_id = mapped_column(Integer)  # 🔥 parent_id → reply_id
+    content = mapped_column(Text, nullable=False)
+    created_at = mapped_column(DateTime, server_default=text("now()"))
+    updated_at = mapped_column(DateTime, server_default=text("now()"))
+
+    post = relationship("ReadingForumPosts", back_populates="comments")
+    user = relationship("Users", back_populates="reading_forum_comments")
+    # self-referencing relationships
+    parent = relationship(
+        "ReadingForumComments",
+        remote_side="ReadingForumComments.id",
+        back_populates="replies",
+        foreign_keys="ReadingForumComments.reply_id"
+    )
+    replies = relationship(
+        "ReadingForumComments",
+        back_populates="parent",
+        foreign_keys="ReadingForumComments.reply_id"
+    )
 
 
 class ReadingLogs(Base):
@@ -273,7 +369,6 @@ class UserTests(Base):
     total_score = mapped_column(Integer)
 
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='user_tests')
-
 
 class UserWordTotal(Users):
     __tablename__ = 'user_word_total'

@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from app.routes.login.login import get_current_user
-from models import Users, Subscriptions, DailyWritings, CustomerSupport, ReadingLogs, UserTests, UserGames, UserBans
+from models import Users, Subscriptions, DailyWritings, ReadingLogs, UserTests, UserGames, UserBans, \
+    CustomerSupportPosts
 from data.postgresDB import SessionLocal
 
 router = APIRouter(prefix="/admin/dashboard", tags=["dashboard"])
@@ -25,7 +26,7 @@ def get_current_admin(current_user: Users = Depends(get_current_user)):
         )
     return current_user
 # ───────────────────────────────
-# 👑 관리자 인증 기반
+# 관리자 인증 기반
 # ───────────────────────────────
 # ───────────────────────────────
 # 1️⃣ 유저 차트: 신규가입 / 밴 / 소셜로그인 분포
@@ -41,7 +42,7 @@ def get_current_admin(current_user: Users = Depends(get_current_user)):
 - **banned_users**: 일별 밴된 사용자 수
 - **social_logins**: 소셜 로그인(oauth) 분포
 
-### Response Example
+### 응답 예시
 ```json
 {
   "new_users": [
@@ -333,7 +334,7 @@ def get_content_chart(
 
 
 # ───────────────────────────────
-# 5️⃣ 고객센터 차트: 문의 카테고리/상태 분포
+# 고객센터 차트: 문의 카테고리/상태 분포
 # ───────────────────────────────
 @router.get(
     "/support/chart",
@@ -342,8 +343,12 @@ def get_content_chart(
 최근 1개월간 고객센터 문의 데이터를 분석합니다.
 
 ### 제공 데이터
-- **by_category**: category별 문의 수  
-  - 예: system, payment, public, private  
+- **by_category**: category별 문의 수     
+    "payment_error",    # 결제 오류
+    "report_user",      # 유저 신고
+    "service_question", # 서비스 문제
+    "bug_report",       # 버그 제보
+    "etc",              #기타 문의
 - **by_status**: status별 문의 수  
   - 예: open, answered, pending  
 
@@ -363,22 +368,23 @@ def get_support_chart(
     db: Session = Depends(get_db),
     current_admin: Users = Depends(get_current_admin)
 ):
-    """
-    최근 1개월간 고객센터 문의 상태 / 카테고리 분포
-    """
     if not current_admin:
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+    #  category 집계
     category_data = (
-        db.query(CustomerSupport.category, func.count(CustomerSupport.id))
-        .filter(CustomerSupport.created_at >= func.now() - text("interval '1 month'"))
-        .group_by(CustomerSupport.category)
+        db.query(CustomerSupportPosts.category, func.count(CustomerSupportPosts.id))
+        .filter(CustomerSupportPosts.created_at >= func.now() - text("interval '1 month'"))
+        .group_by(CustomerSupportPosts.category)
         .all()
     )
 
+    #  status 집계: 기존 ENUM 그대로 유지!!
     status_data = (
-        db.query(CustomerSupport.status, func.count(CustomerSupport.id))
-        .filter(CustomerSupport.created_at >= func.now() - text("interval '1 month'"))
-        .group_by(CustomerSupport.status)
+        db.query(CustomerSupportPosts.status, func.count(CustomerSupportPosts.id))
+        .filter(CustomerSupportPosts.created_at >= func.now() - text("interval '1 month'"))
+        .filter(CustomerSupportPosts.status.in_(['open','in_progress','resolved','closed']))
+        .group_by(CustomerSupportPosts.status)
         .all()
     )
 

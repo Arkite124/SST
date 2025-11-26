@@ -84,7 +84,6 @@ CREATE TABLE IF NOT EXISTS daily_writings (
 CREATE TABLE IF NOT EXISTS reading_forum_posts (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
-    parent_id int references reading_forum_posts(id) on delete cascade default null,
     title VARCHAR(255),
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -92,12 +91,20 @@ CREATE TABLE IF NOT EXISTS reading_forum_posts (
     book_title VARCHAR(255),     -- 관련 도서
     discussion_tags VARCHAR(100) -- 토론 주제 태그
 );
-
+-- 독서토론 댓글 테이블
+CREATE TABLE reading_forum_comments (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    post_id INT REFERENCES reading_forum_posts(id) ON DELETE CASCADE,
+    reply_id INT REFERENCES reading_forum_comments(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 -- 부모 커뮤니티 (JOIN 가능: users)
 CREATE TABLE IF NOT EXISTS parent_forum_posts (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
-    parent_id int references parent_forum_posts(id) on delete cascade default null,
     title VARCHAR(255),   -- 댓글일시 제목이 없음
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
@@ -105,7 +112,16 @@ CREATE TABLE IF NOT EXISTS parent_forum_posts (
     category VARCHAR(50), -- 예: 교육, 육아, 상담
     is_important BOOLEAN DEFAULT FALSE -- 공지 여부
 );
-
+--부모포럼 댓글 테이블
+CREATE TABLE parent_forum_comments (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    post_id INT REFERENCES parent_forum_posts(id) ON DELETE CASCADE,
+    reply_id INT REFERENCES parent_forum_comments(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 -- 테스트 (JOIN 가능: users)
 CREATE TABLE IF NOT EXISTS user_tests (
     id SERIAL PRIMARY KEY,
@@ -164,18 +180,26 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 -- 고객센터 게시판 (질문+답변 쓰레드 구조) (JOIN 가능: users, 자기참조 가능: parent_id)
-CREATE TABLE IF NOT EXISTS customer_support (
+CREATE TABLE customer_support_posts (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
-    parent_id INT REFERENCES customer_support(id) ON DELETE CASCADE, -- null이면 질문, 값이 있으면 답변/댓글
     category VARCHAR(50),
     title VARCHAR(255),
-    content TEXT,
-    status VARCHAR(20) CHECK (status IN ('open','in_progress','resolved','closed')),
+    content TEXT NOT NULL,
+    status VARCHAR(20) CHECK (status IN ('open','in_progress','resolved','closed')) DEFAULT 'open',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE customer_support_comments (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    post_id INT REFERENCES customer_support_posts(id) ON DELETE CASCADE,
+    parent_id INT REFERENCES customer_support_comments(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 -- outputs 분석 결과 저장 - 분석결과 반환용 (JOIN 가능: users)
 CREATE TABLE IF NOT EXISTS outputs (
     outputs_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
