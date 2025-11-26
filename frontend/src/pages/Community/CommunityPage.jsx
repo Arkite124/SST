@@ -21,7 +21,7 @@ export default function CommunityPage() {
                         {tabs.map((tab) => (
                             <button
                                 key={tab.path}
-                                onClick={() => navigate(`/community/${tab.path}`)}
+                                onClick={() => navigate(`/community/${tab.path}`)}//navigate(`/community/${tab.path}`)}
                                 className={`px-4 py-2 rounded-t-xl font-semibold ${
                                     location.pathname.includes(tab.path)
                                         ? "bg-[#4E944F] text-white"

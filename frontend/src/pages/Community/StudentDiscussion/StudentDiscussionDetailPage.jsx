@@ -39,16 +39,25 @@ export default function StudentDiscussionDetailPage() {
     if (!post) return <div>게시글을 불러올 수 없습니다.</div>;
 
     return (
-        <div className="p-6">
-            <button
-                onClick={() => navigate(-1)}
-                className="px-4 py-2 bg-gray-200 rounded"
-            >
-                ← 뒤로가기
-            </button>
+        <>
+            <div className="p-4 bg-[#d8f2b8] rounded-[15pt] overflow-hidden">
+                <div className="bg-[#fff] rounded-[13pt] p-6">
+                    {/*<button*/}
+                    {/*    onClick={() => navigate(-1)}*/}
+                    {/*    className="px-4 py-2 bg-[#3d5919] text-white rounded mb-4"*/}
+                    {/*>*/}
+                    {/*    ← 뒤로가기*/}
+                    {/*</button>*/}
 
-            <PostDetail post={post} />
-            <CommentList postId={id} />
-        </div>
+                    <PostDetail post={post} />
+
+                </div>
+
+            </div>
+            <div className="mt-[30px] mb-6 p-4 bg-[#effbe0] rounded-[15pt] overflow-hidden">
+                <div className="ml-[20px] mt-[10px] text-[18pt] text-[#52904d] font-extrabold ">댓글</div>
+                <CommentList postId={id} />
+            </div>
+        </>
     );
 }

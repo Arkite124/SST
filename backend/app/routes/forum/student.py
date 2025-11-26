@@ -96,6 +96,7 @@ def get_children_level2(db: Session, parent_id: int) -> List[ReadingForumPostRea
         result.append(
             ReadingForumPostRead(
                 id=comment.id,
+                user_id=comment.user_id,  # ✅ user_id 추가
                 parent_id=comment.parent_id,
                 title=comment.title,
                 content=comment.content,
@@ -103,12 +104,12 @@ def get_children_level2(db: Session, parent_id: int) -> List[ReadingForumPostRea
                 discussion_tags=comment.discussion_tags,
                 created_at=comment.created_at,
                 updated_at=comment.updated_at,
-                user=comment.user,
+                user=comment.user,  # UserNickname 객체로 매핑
                 comment_count=len(level2),
                 children=[
                     ReadingForumPostRead(
                         id=reply.id,
-                        user_id=reply.user_id,  # ⬅ 추가!!
+                        user_id=reply.user_id,  # ✅ 반드시 추가
                         parent_id=reply.parent_id,
                         title=reply.title,
                         content=reply.content,

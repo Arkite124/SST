@@ -103,15 +103,16 @@ export default function StudentDiscussionPage() {
     const totalPages = Math.ceil(total / size);
     return (
         <div className="p-1">
+            <h1 className="text-3xl font-black text-[#4E944F] mb-5 ml-3">독서 토론 게시판</h1>
             {/* 제목 + 버튼 */}
-            <div className="flex justify-between items-center mb-2">
-                <h1 className="text-2xl font-bold text-[#4E944F]">독서 토론 게시판</h1>
+            <div className="flex justify-end items-center mb-2">
+
                 {user && (
                     <button
                         onClick={() => setShowForm(!showForm)}
-                        className="px-4 py-2 bg-[#83BD75] text-white rounded-xl hover:bg-[#4E944F] transition-colors font-semibold"
+                        className="px-4 py-2 bg-[#149607] text-white rounded-xl hover:bg-[#f3feb0] hover:text-[#149607]  transition-colors font-semibold"
                     >
-                        {showForm ? "▲ 글쓰기 폼 닫기" : "＋ 새 게시글 작성"}
+                        {showForm ? "▲ 글쓰기 폼 닫기" : "＋ 새 글쓰기"}
                     </button>
                 )}
             </div>
@@ -204,24 +205,29 @@ export default function StudentDiscussionPage() {
                             const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일 ${dateObj.getHours()}시 ${dateObj.getMinutes()}분`;
 
                             return (
-                                <li key={post.id} className="border p-3 rounded-2xl flex flex-col items-start bg-white"
+                                <li key={post.id} className="border-[3px] p-3 pl-6 pr-6 pb-4 pt-4 rounded-2xl flex flex-col items-start
+                                                             bg-white border-[#b3e0a8]
+                                                             hover:-translate-y-1 hover:shadow-md
+                                                             transition-transform transition-shadow duration-200"
                                     onClick={() => navigate(`/community/student-discussion/${post.id}`)}>
                                     <span className="flex w-full justify-between items-center mb-1">
                                         <span>
-                                            <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                                            <span className="bg-[#fff588] text-[#946F3C] font-bold px-3 py-1.5 rounded-full text-[10pt]">
                                                 #{post.discussion_tags}
                                             </span>
                                             &nbsp;
-                                            <span className="bg-blue-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
-                                                #{post.book_title}
-                                            </span>
+
                                         </span>
-                                        <span className="text-gray-500 text-sm">{formattedDate}</span>
+                                        <span className="text-gray-500 text-sm ">{formattedDate}</span>
                                     </span>
 
-                                    <span className="font-semibold mb-1">{post.title}</span>
-                                    <span className="flex w-full justify-between items-start mt-2">
-                                        <span className="whitespace-pre-wrap">{post.content}</span>
+                                    <span className="text-[16pt] font-extrabold mb-1 whitespace-nowrap overflow-hidden text-ellipsis w-[80%] inline-block">{post.title}</span>
+                                    <span className="text-gray-500 font-extrabold text-[14pt] whitespace-nowrap overflow-hidden text-ellipsis w-[80%] inline-block">{post.book_title}</span>
+                                    <span className="flex w-full justify-between items-start mt-1">
+                                        <span className="text-[#888888] whitespace-nowrap overflow-hidden text-ellipsis w-[80%] inline-block">
+                                            {post.content}
+                                        </span>
+
                                         {user && post.user_id === user.id && (
                                             <button
                                                 onClick={(e) => {
