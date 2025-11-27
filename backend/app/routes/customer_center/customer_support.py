@@ -1,10 +1,8 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from datetime import datetime
-
-from app.routes.admin.admin_dashboard import get_current_admin
 from app.routes.login.login import get_current_user
 from data.postgresDB import SessionLocal
 from models import CustomerSupportPosts, CustomerSupportComments, Users
@@ -56,37 +54,69 @@ class CommentCreate(BaseModel):
     content: str
 
 # ==========================================================
-# 📌 FAQ (공개용)
+# FAQ (공개용)
 # ==========================================================
-
-@router.get("/faq", summary="FAQ 목록 조회 (공개)",
+@router.get(
+    "/faq",
+    summary="FAQ 목록 조회 (공개, 페이지네이션)",
     description="""
-고객센터에 등록된 **FAQ(자주 묻는 질문)** 목록을 최신순으로 조회합니다.  
+FAQ(자주 묻는 질문)를 최신순으로 페이지네이션하여 조회합니다.  
 모든 사용자가 접근할 수 있습니다.
 
 ---
 
+## 요청 예시
+`GET /faq?page=1&size=5`
+
 ## 응답 예시
 ```json
-[
-  {
-    "id": 1,
-    "category": "public",
-    "title": "결제는 어떻게 하나요?",
-    "content": "결제 방법은 ...",
-    "created_at": "2025-01-01T12:00:00"
-  }
-]
+{
+  "total_count": 25,
+  "page": 1,
+  "size": 10,
+  "items": [
+    {
+      "id": 1,
+      "category": "public",
+      "title": "결제는 어떻게 하나요?",
+      "content": "결제 방법은 ...",
+      "created_at": "2025-01-01T12:00:00"
+    }
+  ]
+}
 """
 )
-async def faq_list(db: Session = Depends(get_db)):
+async def faq_list(
+    page: int = Query(1, ge=1, description="페이지 번호 (1부터 시작)"),
+    size: int = Query(5, ge=1, le=50, description="페이지 크기 (기본 5, 최대 50)"),
+    db: Session = Depends(get_db)
+):
+    # 전체 개수
+    total_count = (
+    db.query(CustomerSupportPosts)
+    .filter(CustomerSupportPosts.category == FAQ_CATEGORY)
+    .count()
+    )
+
+    # 페이지 계산
+    skip = (page - 1) * size
+
+    # FAQ 조회
     posts = (
         db.query(CustomerSupportPosts)
         .filter(CustomerSupportPosts.category == FAQ_CATEGORY)
         .order_by(CustomerSupportPosts.created_at.desc())
+        .offset(skip)
+        .limit(size)
         .all()
     )
-    return posts
+
+    return {
+        "total_count": total_count,
+        "page": page,
+        "size": size,
+        "items": posts
+    }
 
 @router.get("/faq/{post_id}",
     summary="FAQ 상세 조회",

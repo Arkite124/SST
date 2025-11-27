@@ -55,6 +55,7 @@ import ProfilePwConfirm from "./pages/MyPage/ProfileEdit/ProfilePwConfirm";
 import UserBanManager from "./pages/Admin/UserBanManager";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
 import Social from "@/pages/Auth/Register/Social.jsx";
+import CustomerCenter from "@/pages/CustomerCenter/CustomerCenter.jsx";
 
 function App() {
     return (
@@ -122,6 +123,10 @@ function App() {
                             <Route index element={<AdminDashboard />} />
                             <Route path="dashboard" element={<AdminDashboard />} />
                             <Route path="user_ban" element={<UserBanManager />} />
+                        </Route>
+                        {/* 고객센터 */}
+                        <Route path="support" element={<CustomerCenter />}>
+                            <Route index element={<CustomerCenter />} />
                         </Route>
 
                         {/* 로그인 */}

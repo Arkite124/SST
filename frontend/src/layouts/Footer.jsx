@@ -18,7 +18,7 @@ function Footer() {
                             <a href="/privacy" className="hover:text-[#b6cd4b]">
                                 개인정보처리방침
                             </a>
-                            <a href="mailto:dodamdodam@sst.com" className="hover:text-[#b6cd4b]">
+                            <a href="/support" className="hover:text-[#b6cd4b]">
                                 문의하기
                             </a>
                         </div>
