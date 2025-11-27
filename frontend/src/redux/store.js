@@ -1,6 +1,8 @@
 // src/redux/store.js
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import storage from "redux-persist/lib/storage";
+import commentReducer from "./slices/commentSlice.js";
+
 import {
     persistReducer,
     persistStore,
@@ -33,6 +35,7 @@ const rootReducer = combineReducers({
     vocabulary: vocabularyReducer, //어휘력 테스트
     parent:parentReducer,
     userBans:userBanReducer,
+    comment: commentReducer, // 댓글
 });
 
 // ✅ persistConfig (auth만 저장) 여기부터 안건들면 됩니다.

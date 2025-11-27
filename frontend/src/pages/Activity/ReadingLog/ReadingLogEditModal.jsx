@@ -42,9 +42,9 @@ export default function ReadingLogEditModal({ log, onSubmit }) {
         closeModal();
     };
 
-    // 포탈로 최상단 렌더링
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+
             {/* 백드롭 */}
             <div
                 className="absolute inset-0 bg-black bg-opacity-50"
@@ -90,7 +90,7 @@ export default function ReadingLogEditModal({ log, onSubmit }) {
                 <div>
                     <label className="block mb-1 text-gray-600">느낀 점 *</label>
                     <textarea
-                        className="w-full border rounded-xl p-2 h-32 focus:ring-2 focus:ring-[#4E944F]"
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F] max-h-[200px] h-[200px] overflow-y-auto resize-none"
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         required
@@ -100,7 +100,7 @@ export default function ReadingLogEditModal({ log, onSubmit }) {
                 <div>
                     <label className="block mb-1 text-gray-600">어려웠던 문장</label>
                     <textarea
-                        className="w-full border rounded-xl p-2 h-24 focus:ring-2 focus:ring-[#4E944F]"
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F] max-h-[80px] h-[200px] overflow-y-auto resize-none"
                         value={unknownSentence}
                         onChange={(e) => setUnknownSentence(e.target.value)}
                     />
