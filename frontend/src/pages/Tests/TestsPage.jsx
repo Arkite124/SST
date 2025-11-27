@@ -37,8 +37,8 @@ export default function TestsPage() {
                             <div className="flex gap-10">
                                 <button
                                     onClick={() => setSelectedTest("reading")}
-                                    className="flex-1 py-4 bg-[#DAE2B6]/60 text-gray-700 font-semibold rounded-2xl shadow
-                                    hover:bg-[#f1ffe0]/90 hover:text-[#3d5919] transition-colors duration-200
+                                    className="flex-1 py-4 bg-white/90 text-gray-700 font-semibold rounded-2xl shadow
+                                    hover:bg-[#f1ffe0] hover:text-[#3d5919] transition-colors duration-200
                                     w-[500px] h-[500px] relative flex flex-col items-center justify-center gap-4"
                                 >
                                     <img
@@ -55,11 +55,16 @@ export default function TestsPage() {
                                     <div className="relative top-5 px-7 py-1 text-xl bg-[#3d5919] text-white rounded-2xl">
                                         확인해보기
                                     </div>
+                                    <img
+                                        src="https://media.tenor.com/U8xIb-q6zmUAAAAj/venezuela-parrot.gif"
+                                        alt="parrot"
+                                        className="scale-x-[-1] w-[80px] absolute top-[450px] right-[320px] -z-10"
+                                    />
                                 </button>
                                 <button
                                     onClick={() => setSelectedTest("vocabulary")}
-                                    className="flex-1 py-4 bg-[#DAE2B6]/60 text-gray-700 font-semibold rounded-2xl shadow
-                                    hover:bg-[#f1ffe0]/90 hover:text-[#3d5919] transition-colors duration-200
+                                    className="flex-1 py-4 bg-white/90 text-gray-700 font-semibold rounded-2xl shadow
+                                    hover:bg-[#f1ffe0] hover:text-[#3d5919] transition-colors duration-200
                                     relative flex flex-col items-center justify-center gap-4">
                                     <img
                                         src={voca}
@@ -75,6 +80,11 @@ export default function TestsPage() {
                                     <div className="relative top-5 px-7 py-1 text-xl bg-[#3d5919] text-white rounded-2xl">
                                         확인해보기
                                     </div>
+                                    <img
+                                        src="https://media.tenor.com/zF7UE_HdlqEAAAAi/bird.gif"
+                                        alt="bird"
+                                        className="w-[75px] absolute bottom-[500px] right-[-30px] -z-10"
+                                    />
                                 </button>
                             </div>
                         </>

@@ -10,6 +10,7 @@ import Notification from '@/components/common/Notification';
 import GameButton from '@/components/common/GameButton.jsx';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import useCheckUser from "@/hooks/useCheckUser.jsx";
+import grass from "@/assets/pattern1.png"
 
 const WordChainPage = () => {
     const navigate = useNavigate();
@@ -17,19 +18,18 @@ const WordChainPage = () => {
     useAuthLoad()
     useCheckUser();
     return (
-        <div className="min-h-[70%] bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden flex items-center justify-center p-4">
+        <div className="z-20 w-[80%] min-h-[80%] rounded-2xl bg-gradient-to-br from-[#cff09e]/80 to-[#f1ffe0]/80 overflow-hidden flex items-center justify-center p-4">
             <div className="w-full max-w-4xl h-full flex flex-col">
                 {/* 헤더 */}
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex  justify-between items-center mb-2">
                     <GameButton
-                        onClick={() => navigate('/')}
-                        variant="secondary"
-                        className="text-sm"
+                        onClick={() => navigate('/games')}
+                        className="bg-[#3d5919] text-white"
                     >
-                        ← 홈으로
+                        ← 목록으로
                     </GameButton>
-                    <h1 className="text-2xl font-bold text-green-700">
-                        끝말잇기 게임
+                    <h1 className="font-juache text-3xl font-normal text-[#3d5919]">
+                        끝말잇기
                     </h1>
                     <div className="w-20"></div>
                 </div>
@@ -40,7 +40,7 @@ const WordChainPage = () => {
                     <div className="flex-1 p-4 flex items-center justify-center overflow-y-auto">
                         <div className="w-full max-w-2xl">
                             {/* 난이도 선택 */}
-                            {!state.gameStarted && (
+                            {!state.gameStarted && !state.gameOver && (
                                 <DifficultySelector onSelect={actions.start} />
                             )}
 
@@ -72,25 +72,12 @@ const WordChainPage = () => {
                     </div>
 
                     {/* 하단 가이드 */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 border-t border-green-100">
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                            <div>
-                                <h4 className="font-bold text-green-700 mb-2">💡 게임 팁</h4>
-                                <ul className="text-green-600 space-y-1">
-                                    <li>• 끝말을 이어서 단어를 입력하세요</li>
-                                    <li>• 시간 내에 답을 제출하세요</li>
-                                    <li>• 한방 단어는 피하는 게 좋아요</li>
-                                </ul>
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-green-700 mb-2">🎮 게임 방법</h4>
-                                <ul className="text-green-600 space-y-1">
-                                    <li>• 난이도를 선택하고 시작</li>
-                                    <li>• 제시된 단어로 끝말잇기</li>
-                                    <li>• 국립국어원 사전 단어만 인정</li>
-                                </ul>
-                            </div>
-                        </div>
+                    <div className="p-3">
+                        <img
+                            src={grass}
+                            alt="grass"
+                            className="w-full h-auto rounded-lg shadow-lg"
+                        />
                     </div>
                 </div>
 

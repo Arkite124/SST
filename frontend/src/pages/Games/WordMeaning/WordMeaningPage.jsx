@@ -20,16 +20,15 @@ const WordMeaningPage = () => {
     useAuthLoad()
     useCheckUser();
     return (
-        <div className="min-h-[70%] bg-gradient-to-br from-purple-50 to-pink-50 py-8">
+        <div className="z-20 min-h-[70%] bg-gradient-to-br from-purple-50 to-pink-50 py-8">
             <div className="container mx-auto px-4 max-w-2xl">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    {/* 헤더 */}
+                <div className="bg-white rounded-2xl shadow-xl p-2">
                     <GameButton
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/games')}
                         variant="secondary"
-                        className="text-sm mb-4"
+                        className="text-sm"
                     >
-                        ← 홈으로
+                        ← 목록으로
                     </GameButton>
 
                     <h1 className="text-4xl font-bold text-center mb-8 text-purple-600">

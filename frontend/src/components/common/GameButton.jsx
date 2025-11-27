@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GameButton = ({ children, onClick, variant = 'primary', disabled = false, className = '' }) => {
+const GameButton = ({ children, onClick, variant , disabled = false, className = '' }) => {
     const baseClass = 'px-6 py-3 rounded-lg font-bold transition-all duration-200';
 
     const variants = {

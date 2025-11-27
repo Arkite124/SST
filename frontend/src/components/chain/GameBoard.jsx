@@ -54,19 +54,19 @@ const GameBoard = () => {
                             key={`${history.length - index - 1}-${item.word}`}
                             className={`p-4 rounded-xl shadow-md transform transition-all duration-300 ${
                                 item.type === 'user'
-                                    ? 'bg-gradient-to-r from-blue-400 to-blue-300 text-right ml-8'
-                                    : 'bg-gradient-to-r from-pink-400 to-pink-300 text-left mr-8'
+                                    ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-right ml-8'
+                                    : 'bg-gradient-to-r from-white to-green-50 text-left mr-8'
                             }`}
                             style={{
                                 animation: 'slideIn 0.3s ease-out'
                             }}
                         >
-                            <div className="font-bold text-xl mb-1 text-white">
+                            <div className="font-bold text-xl mb-1 text-gray-600">
                                 {item.type === 'user' ? '👤 나' : '🤖 컴퓨터'}:
                                 <span className="ml-2">{item.word}</span>
                             </div>
                             {item.definition && (
-                                <div className="text-sm text-white/90 mt-2 bg-black/10 px-3 py-1 rounded-lg inline-block">
+                                <div className="text-sm text-gray-900/90 mt-2 bg-black/10 px-3 py-1 rounded-lg inline-block">
                                     💡 {item.definition}
                                 </div>
                             )}

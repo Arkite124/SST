@@ -60,7 +60,7 @@ function Header() {
                             to={path}
                             className={`pb-1 transition-colors ${
                                 isActive(path)
-                                    ? "text-[#cff09e] border-b-2 border-[#cff09e]"
+                                    ? "text-[#cff09e] border-[#cff09e]"
                                     : "text-[#3d5919] hover:text-[#3d5919]"
                             }`}
                         >

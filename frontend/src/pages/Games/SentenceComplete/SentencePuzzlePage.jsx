@@ -8,15 +8,15 @@ const SentencePuzzlePage = () => {
     const navigate = useNavigate();
     useAuthLoad();
     return (
-        <div className="min-h-[70%] bg-gradient-to-br from-green-400 to-blue-500 py-8 px-4">
+        <div className="z-20 min-h-[70%] bg-gradient-to-br from-green-400 to-blue-500 py-8 px-4">
             <div className="max-w-6xl mx-auto">
                 <div className="mb-4 flex justify-between items-center">
                     <GameButton
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/games')}
                         variant="secondary"
                         className="text-sm"
                     >
-                        ← 홈으로
+                        ← 목록으로
                     </GameButton>
                     <div className="text-white text-sm font-semibold">
                         문장 퍼즐 게임

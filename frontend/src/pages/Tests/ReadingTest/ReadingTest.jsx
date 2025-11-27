@@ -5,7 +5,7 @@ import { playTTS, stopAudio } from "@/redux/slices/audioSlice";
 import { endGame, resetTest, submitAnswer as submitAnswerAction, nextQuestion } from "@/redux/slices/ReadingSlice.js";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import { readingApi } from "@/utils/readingApi";
-import useCheckUser from "@/hooks/useCheckUser.jsx";
+import LoadingSpinner from "@/components/common/LoadingSpinner.jsx";
 
 const MAX_QUESTIONS = 10;
 
@@ -23,18 +23,26 @@ const ReadingTest = () => {
     const [hasAnswered, setHasAnswered] = useState(false); // ✅ 답변 완료 상태
 
     useAuthLoad();
-    useCheckUser();
+
     // 🔹 게임 시작 - readingApi 기반
     useEffect(() => {
         if (!hasFetchedRef.current && user?.id) {
             hasFetchedRef.current = true;
             (async () => {
-                const data = await readingApi.startGame(user.id, MAX_QUESTIONS, user.vocabulary_age);
-                dispatch(resetTest());
-                dispatch({
-                    type: "reading/fetchQuestions/fulfilled",
-                    payload: data.questions
-                });
+                dispatch({ type: "reading/fetchQuestions/pending" }); // ✅ 로딩 시작
+
+                try {
+                    const data = await readingApi.startGame(user.id, MAX_QUESTIONS, user.vocabulary_age);
+
+                    dispatch(resetTest());
+                    dispatch({
+                        type: "reading/fetchQuestions/fulfilled",
+                        payload: data.questions
+                    });
+                } catch (error) {
+                    dispatch({ type: "reading/fetchQuestions/rejected" });
+                    console.error("문제 불러오기 실패:", error);
+                }
             })();
         }
     }, [user, dispatch]);
@@ -103,6 +111,11 @@ const ReadingTest = () => {
         setHasAnswered(false);
     };
 
+    if (loading)
+        return (
+            <LoadingSpinner text="문제를 불러오는 중..." />
+        );
+
     return (
         <div style={{ maxWidth: "600px", margin: "auto", padding: "24px" }}>
             <h1>문해력 테스트</h1>
@@ -110,7 +123,7 @@ const ReadingTest = () => {
                 진행: {questionCount}/{MAX_QUESTIONS} | 정답: {correctCount}
             </div>
 
-            {loading && <p>문제를 불러오는 중...</p>}
+            {loading && <LoadingSpinner text="문제를 불러오는 중..." />}
 
             {currentQuestion && !finished && (
                 <>

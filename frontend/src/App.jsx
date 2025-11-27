@@ -94,7 +94,6 @@ function App() {
 
                         {/* 게임 */}
                         <Route path="games" element={<GamesPage />}>
-                            <Route index element={<WordChainPage />} />
                             <Route path="word-chain" element={<WordChainPage />} />
                             <Route path="word-meaning" element={<WordMeaningPage />} />
                             <Route path="sentence-complete" element={<SentencePuzzlePage />} />

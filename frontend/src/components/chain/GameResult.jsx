@@ -44,7 +44,7 @@ const GameResult = () => {
             </div>
 
             {/* 🔥 버튼 */}
-            <GameButton onClick={() => dispatch(restartGame())}>
+            <GameButton className="bg-lime-100" onClick={() => dispatch(restartGame())}>
                 같은 난이도로 다시 시작
             </GameButton>
 
