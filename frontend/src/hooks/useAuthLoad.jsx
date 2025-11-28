@@ -10,19 +10,19 @@ export default function useAuthLoad() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        dispatch(fetchMeThunk());
-        dispatch(fetchParentMe());
-
-        const interval = setInterval(async () => {
-            try {
-                await axiosInstance.post("/auth/refresh", {});
-            } catch (err) {
-                console.error("refresh 실패:", err);
-                navigate("/");
-            }
-        }, 1000 * 60 * 5);
-
-        return () => clearInterval(interval);
-    }, [dispatch, navigate]);
+    // useEffect(() => {
+    //     dispatch(fetchMeThunk());
+    //     dispatch(fetchParentMe());
+    //
+    //     const interval = setInterval(async () => {
+    //         try {
+    //             await axiosInstance.post("/auth/refresh", {});
+    //         } catch (err) {
+    //             console.error("refresh 실패:", err);
+    //             navigate("/");
+    //         }
+    //     }, 1000 * 60 * 5);
+    //
+    //     return () => clearInterval(interval);
+    // }, [dispatch, navigate]);
 }

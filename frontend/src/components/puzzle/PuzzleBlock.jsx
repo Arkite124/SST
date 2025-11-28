@@ -10,7 +10,7 @@ const PuzzleBlock = ({ block, onClick, type = 'source' }) => {
         }));
     };
 
-    const baseStyles = "px-6 py-3 rounded-lg text-lg font-medium shadow-md transition-all duration-300 select-none";
+    const baseStyles = "px-5 py-2 rounded-lg text-lg font-medium shadow-md transition-all duration-300 select-none";
 
     const typeStyles = {
         source: "bg-white hover:shadow-lg hover:-translate-y-1 active:opacity-70 active:scale-95 cursor-move",
