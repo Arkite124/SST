@@ -1,33 +1,48 @@
 // src/pages/Activity/ReadingLog/ReadingLogModal.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
 import { useModal } from "@/contexts/ModalContext";
 
-export default function ReadingLogModal({ onSubmit }) {
-    const [book_title, setBookTitle] = useState("");
+export default function ReadingLogModal({ log = null, onSubmit }) {
+    const [bookTitle, setBookTitle] = useState("");
     const [author, setAuthor] = useState("");
     const [publisher, setPublisher] = useState("");
     const [content, setContent] = useState("");
+    const [unknownSentence, setUnknownSentence] = useState("");
     const [image, setImage] = useState("");
     const [link, setLink] = useState("");
     const { closeModal, alert } = useModal();
 
+    // 기존 데이터가 있을 경우 세팅 (편집 모드)
+    useEffect(() => {
+        if (log) {
+            setBookTitle(log.book_title || "");
+            setAuthor(log.author || "");
+            setPublisher(log.publisher || "");
+            setContent(log.content || "");
+            setUnknownSentence(log.unknown_sentence || "");
+            setImage(log.image || "");
+            setLink(log.link || "");
+        }
+    }, [log]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!book_title.trim()) {
-            await alert("입력 오류", "책 제목을 입력해주세요!");
+        if (!bookTitle.trim() || !content.trim()) {
+            await alert("입력 오류", "책 제목과 내용은 필수 입력 항목입니다.");
             return;
         }
 
         const created_at = new Date().toISOString();
 
         onSubmit({
-            book_title,
+            book_title: bookTitle,
             author,
             publisher,
             content,
+            unknown_sentence: unknownSentence,
             image,
             link,
             created_at,
@@ -47,85 +62,67 @@ export default function ReadingLogModal({ onSubmit }) {
             {/* 모달 컨텐츠 */}
             <form
                 onSubmit={handleSubmit}
-                className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-6"
+                className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-5"
             >
                 <div>
-                    <label className="block mb-1 text-gray-600">
-                        책 제목 *
-                        <input
-                            className="w-full border rounded-lg p-2 mt-1"
-                            value={book_title}
-                            onChange={(e) => setBookTitle(e.target.value)}
-                            required
-                            placeholder="책 제목을 입력하세요"
-                        />
-                    </label>
+                    <label className="block mb-1 text-gray-600">책 제목 *</label>
+                    <input
+                        type="text"
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F]"
+                        value={bookTitle}
+                        onChange={(e) => setBookTitle(e.target.value)}
+                        required
+                        placeholder="책 제목을 입력하세요."
+                    />
                 </div>
 
                 <div>
-                    <label className="block mb-1 text-gray-600">
-                        저자
-                        <input
-                            className="w-full border rounded-lg p-2 mt-1"
-                            value={author}
-                            onChange={(e) => setAuthor(e.target.value)}
-                            placeholder="저자를 입력하세요"
-                        />
-                    </label>
+                    <label className="block mb-1 text-gray-600">저자</label>
+                    <input
+                        type="text"
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F]"
+                        value={author}
+                        onChange={(e) => setAuthor(e.target.value)}
+                        placeholder="저자를 입력하세요."
+                    />
                 </div>
 
                 <div>
-                    <label className="block mb-1 text-gray-600">
-                        출판사
-                        <input
-                            className="w-full border rounded-lg p-2 mt-1"
-                            value={publisher}
-                            onChange={(e) => setPublisher(e.target.value)}
-                            placeholder="출판사를 입력하세요"
-                        />
-                    </label>
+                    <label className="block mb-1 text-gray-600">출판사</label>
+                    <input
+                        type="text"
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F]"
+                        value={publisher}
+                        onChange={(e) => setPublisher(e.target.value)}
+                        placeholder="출판사를 입력하세요."
+                    />
                 </div>
 
                 <div>
-                    <label className="block mb-1 text-gray-600">
-                        내용
-                        <textarea
-                            className="w-full border rounded-lg p-2 mt-1 h-32"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            required
-                            placeholder="독서록 내용을 입력하세요"
-                        />
-                    </label>
+                    <label className="block mb-1 text-gray-600">내용 *</label>
+                    <textarea
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F] h-32 max-h-[200px] overflow-y-auto resize-none"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        required
+                        placeholder="책을 읽으면서 느낀 점, 생각 등을 적어주세요."
+                    />
                 </div>
 
                 <div>
-                    <label className="block mb-1 text-gray-600">
-                        이미지 URL
-                        <input
-                            className="w-full border rounded-lg p-2 mt-1"
-                            value={image}
-                            onChange={(e) => setImage(e.target.value)}
-                            placeholder="책 이미지 URL"
-                        />
-                    </label>
+                    <label className="block mb-1 text-gray-600">어려웠던 문장</label>
+                    <textarea
+                        className="w-full border rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F] h-32 max-h-[200px] overflow-y-auto resize-none"
+                        value={unknownSentence}
+                        onChange={(e) => setUnknownSentence(e.target.value)}
+                        placeholder="읽으면서 어려웠던 문장을 적어주세요."
+                    />
                 </div>
 
-                <div>
-                    <label className="block mb-1 text-gray-600">
-                        네이버 링크
-                        <input
-                            className="w-full border rounded-lg p-2 mt-1"
-                            value={link}
-                            onChange={(e) => setLink(e.target.value)}
-                            placeholder="책 상세보기 링크"
-                        />
-                    </label>
-                </div>
 
                 <div className="flex justify-end gap-3">
                     <Button label="취소" variant="secondary" onClick={closeModal} />
-                    <Button label="등록" type="submit" />
+                    <Button label={log ? "수정" : "등록"} type="submit" />
                 </div>
             </form>
         </div>,

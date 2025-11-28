@@ -75,6 +75,7 @@ class ReadingForumCommentRead(BaseModel):
     updated_at: datetime
     user: UserNickname
     has_replies: bool = False
+    reply_count: int = 0 # 댓글개수 카운트 시 필요
 
     class Config:
         from_attributes = True
@@ -557,9 +558,11 @@ db: Session = Depends(get_db)
 
     items = []
     for c in comments:
-        has_replies = db.query(ReadingForumComments).filter(
+        reply_count = db.query(ReadingForumComments).filter(
             ReadingForumComments.reply_id == c.id
-        ).count() > 0
+        ).count()
+
+        has_replies = reply_count > 0
 
         items.append(
             ReadingForumCommentRead(
@@ -570,7 +573,8 @@ db: Session = Depends(get_db)
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 user=c.user,
-                has_replies=has_replies
+                has_replies=reply_count > 0,
+                reply_count=reply_count
             )
         )
     return CommentListResponse(

@@ -33,16 +33,15 @@ export default function ReadingLogDetailModal({ log, onEdit, onDelete }) {
                     {new Date(log.created_at).toLocaleDateString()}
                 </p>
                 <p className="whitespace-pre-line text-gray-700 mb-4">{log.content}</p>
-                {/*{log.link && (*/}
-                {/*    <a*/}
-                {/*        href={log.link}*/}
-                {/*        target="_blank"*/}
-                {/*        rel="noopener noreferrer"*/}
-                {/*        className="text-blue-600 underline block mb-4"*/}
-                {/*    >*/}
-                {/*        네이버 책 상세보기 →*/}
-                {/*    </a>*/}
-                {/*)}*/}
+
+                {/* 어려웠던 문장 */}
+                {log.unknown_sentence && (
+                    <div className="mt-4 p-4 bg-gray-100 rounded-lg border-l-4 border-[#4E944F]">
+                        <h4 className="font-medium text-gray-800 mb-1">어려웠던 문장</h4>
+                        <p className="text-gray-700 whitespace-pre-line">{log.unknown_sentence}</p>
+                    </div>
+                )}
+
                 <div className="flex justify-end gap-3 mt-6">
                     <Button variant="secondary" label="닫기" onClick={closeModal} />
                     <Button
