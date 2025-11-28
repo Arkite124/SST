@@ -121,7 +121,9 @@ router = APIRouter(prefix="/admin/users", tags=["User Ban"])
 - 자동 벤(is_auto) 값도 포함 가능  
 - banned_by 필드는 자동으로 관리자 ID로 설정
 
-### Response Example
+---
+
+### 응답 예시
 ```json
 {
   "id": 4,
@@ -170,9 +172,10 @@ description="""
 전체 벤 이력을 페이지네이션 형태로 조회합니다.
 유저 닉네임이 함께 포함됩니다.
 
-Response Example
-json
-코드 복사
+---
+
+###응답 예시
+```json
 {
   "items": [
     {

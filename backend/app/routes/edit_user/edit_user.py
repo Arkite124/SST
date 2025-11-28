@@ -49,14 +49,35 @@ class UserUpdate(BaseModel):
 # ---------------------------
 # ✅ 내 정보 조회
 # ---------------------------
-@router.get("/me", response_model=UserRead)
+@router.get("/me",
+    response_model=UserRead,
+    summary="내 정보를 조회합니다.",
+    description=
+    """로그인한 사용자의 프로필 정보를 반환합니다.
+    JWT 인증이 필요합니다.
+    
+    ---
+    
+    ### 응답 예시
+    ```json
+    {
+      "id": 3,
+      "name": "홍길동",
+      "nickname": "길동이",
+      "age": 12,
+      "gender": "male",
+      "phone": "010-1234-5678",
+      "oauth": "google",
+      "role": "customer",
+      "email": "test@example.com",
+      "key_parent": null
+    }"""
+)
 def info(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+
 ):
-    """
-    내 정보를 조회하는 엔드포인트 입니다.
-    """
     if not current_user:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     return current_user   # ORM 객체 그대로 반환 (Pydantic에서 처리)
@@ -64,24 +85,44 @@ def info(
 # ---------------------------
 # ✅ 내 정보 수정
 # ---------------------------
-@router.patch("/me", response_model=UserRead)
+@router.patch("/me", response_model=UserRead,
+      summary="내 프로필 정보를 수정합니다",
+     description="""닉네임 / 전화번호는 중복 검증 후 수정 가능합니다.
+key_parent 수정 시 bcrypt 해시로 암호화됩니다.
+변경된 값만 부분 수정(PATCH) 방식으로 전송합니다.
+
+### 요청 예시
+```json
+{
+    "nickname": "새싹맘",
+    "age": 13,
+    "phone": "010-5555-7777",
+    "key_parent": "my-parent-key"
+}
+
+```
+
+### 응답 예시
+```json
+{
+    "id": 3,
+    "name": "홍길동",
+    "nickname": "새싹맘",
+    "age": 13,
+    "gender": "female",
+    "phone": "010-5555-7777",
+    "oauth": "google",
+    "role": "customer",
+    "email": "test@example.com",
+    "key_parent": "$2b$12$92qZ..."
+}"""
+)
 def patch_info(
     data: UserRead = Body(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    유저 정보를 수정하는 엔드포인트 입니다.
-    닉네임, 핸드폰 번호는 중복 확인 로직 넣어주셔야 합니다.
-    name: Optional[str]
-    nickname: Optional[str]
-    age: Optional[int]
-    gender: Optional[str]
-    phone: Optional[str] = None
-    oauth: Optional[str] = None
-    email: str
-    key_parent: Optional[str]
-    """
+
     if not current_user:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 

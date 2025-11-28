@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import axiosInstance from "@/utils/axiosInstance.js";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import useCheckUser from "@/hooks/useCheckUser.jsx";
 import { useModal } from "@/contexts/ModalContext.jsx";
+import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 
 export default function StudentDiscussionPage() {
     const [posts, setPosts] = useState([]);
@@ -23,8 +23,7 @@ export default function StudentDiscussionPage() {
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { alert, confirm } = useModal();
-    useCheckUser();
-
+    useAuthLoad();
     // 게시글 목록 가져오기
     const fetchPosts = async () => {
         setLoadingList(true);

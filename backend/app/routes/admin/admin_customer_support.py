@@ -345,7 +345,7 @@ async def admin_create_comment(
     # 🔥 관리자 댓글이 달리면 상태 자동 변경
     if post.status in ("open", "in_progress"):
         post.status = "resolved"
-        post.updated_at = datetime.utcnow()
+        post.updated_at = datetime.now()
 
     db.commit()
     db.refresh(comment)

@@ -66,7 +66,7 @@ class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str
 
-aws_url=os.getenv("AWS_URL")
+aws_url=os.getenv("AWS_URL","https://sprout-kids.org")
 
 # 1. 비밀번호 재설정 요청
 @router.post("/pw_reset/request")

@@ -2,6 +2,7 @@ import {useNavigate, Outlet, useLocation} from "react-router-dom";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import bgImg from "@/assets/bgImg.png";
 import book from "@/assets/game.png"
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function GamesPage() {
     const tabs = [
@@ -15,7 +16,7 @@ export default function GamesPage() {
     const navigate = useNavigate();
     const location = useLocation();
     useAuthLoad();
-
+    useCheckUser();
     // 현재 경로가 /games인지 확인
     const isRoot = location.pathname === "/games";
 

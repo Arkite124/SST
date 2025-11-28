@@ -4,6 +4,7 @@ import PostDetail from "@/components/Community/PostDetail.jsx";
 import CommentList from "@/components/Community/CommentList.jsx";
 import axiosInstance from "@/utils/axiosInstance.js";
 import {useModal} from "@/contexts/ModalContext.jsx";
+import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 
 export default function StudentDiscussionDetailPage() {
     const { id } = useParams();
@@ -11,6 +12,7 @@ export default function StudentDiscussionDetailPage() {
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
     const {alert} = useModal();
+    useAuthLoad();
     useEffect(() => {
         const fetchPost = async () => {
             setLoading(true);

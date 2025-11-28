@@ -201,7 +201,7 @@ size	페이지당 항목 수 (기본 10)
 {
   "total": 3,
   "page": 1,
-  "size": 10,
+  "size": 5,
   "items": [
     {
       "id": 10,
@@ -272,7 +272,9 @@ public(FAQ) 포함 모든 카테고리 가능
   "category": "payment_error",
   "title": "결제가 안됩니다",
   "content": "카드 오류가 반복됩니다"
-}```
+}
+
+```
 
 ### 응답 예시
 ```json
@@ -310,14 +312,11 @@ async def create_post(
         content=data.content,
         created_at=datetime.now()
     )
-
     db.add(post)
     db.commit()
     db.refresh(post)
 
     return post
-
-
 # ==========================================================
 # 📌 게시글 조회 (본인 글 또는 공개 글만)
 # ==========================================================
@@ -330,15 +329,36 @@ description="""
 글 종류	접근 권한
 FAQ(public)	누구나
 일반 문의	본인 + 관리자만
+
+---
+
 ### 응답 예시
 ```json
 {
-  "id": 55,
-  "user_id": 3,
-  "category": "service_question",
-  "title": "서비스 문제 문의",
-  "content": "앱이 자꾸 종료됩니다",
-  "status": "open"
+  "id": 44,
+  "title": "결제가 안됩니다",
+  "content": "카드 오류가 뜹니다",
+  "status": "in_progress",
+  "comments": [
+    {
+      "id": 10,
+      "user_id": 1,
+      "role": "admin",
+      "content": "해당 오류는 현재 점검 중입니다.",
+      "created_at": "2025-01-01T12:00:00",
+
+      "replies": [
+        {
+          "id": 11,
+          "user_id": 3,
+          "role": "customer",
+          "content": "확인 감사합니다.",
+          "created_at": "2025-01-01T12:10:00",
+          "replies": []
+        }
+      ]
+    }
+  ]
 }
 
 """
@@ -348,20 +368,64 @@ async def get_post(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_user)
 ):
+    # 🔹 1) 게시글 조회
     post = db.query(CustomerSupportPosts).filter(CustomerSupportPosts.id == post_id).first()
 
     if not post:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
 
-    # FAQ(public)는 모두 가능
-    if post.category == FAQ_CATEGORY:
-        return post
+    # 🔹 접근 권한 체크
+    if post.category != "public":
+        if post.user_id != current_user.id and current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
-    # 유저 자신의 글만
-    if post.user_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+    # 🔹 2) 부모 댓글 조회 (reply_id=None)
+    parent_comments = (
+        db.query(CustomerSupportComments)
+        .filter(
+            CustomerSupportComments.post_id == post_id,
+            CustomerSupportComments.reply_id.is_(None)
+        )
+        .order_by(CustomerSupportComments.created_at.asc())
+        .all()
+    )
 
-    return post
+    def build_comment_tree(comment):
+        """대댓글 트리 재귀 생성"""
+        return {
+            "id": comment.id,
+            "user_id": comment.user_id,
+            "content": comment.content,
+            "created_at": comment.created_at,
+            "user": {
+                "id": comment.user.id,
+                "nickname": comment.user.nickname,
+                "role": comment.user.role,
+            },
+            "replies": [
+                build_comment_tree(child)
+                for child in comment.replies
+            ],
+        }
+
+    # 🔹 트리 구조 구성
+    comment_tree = [build_comment_tree(c) for c in parent_comments]
+
+    # 🔹 최종 응답
+    return {
+        "id": post.id,
+        "category": post.category,
+        "title": post.title,
+        "content": post.content,
+        "status": post.status,
+        "created_at": post.created_at,
+        "user": {
+            "id": post.user.id,
+            "nickname": post.user.nickname,
+            "role": post.user.role,
+        },
+        "comments": comment_tree
+    }
 
 
 # ==========================================================
@@ -377,8 +441,29 @@ description="""
 - 본인만 수정 가능
 - FAQ(public) 카테고리 변경은 관리자만 가능
 - 임의의 카테고리 값으로 변경 불가
+- **status가 open(접수됨) 상태일 때만 수정 가능**
 
-응답 예시
+### ❗ 수정 가능한 상태
+| status | 의미 | 수정 가능 여부 |
+|--------|------|----------------|
+| open | 접수됨 | ✅ 가능 |
+| in_progress | 검토중 | ❌ 불가 |
+| closed | 완료됨 | ❌ 불가 |
+
+---
+
+### 요청 예시
+```json
+{
+  "title": "문의드립니다 (수정됨)",
+  "content": "추가 설명입니다."
+}
+
+```
+
+---
+
+### 응답 예시
 ```json
 {
   "title": "문의드립니다 (수정됨)",
@@ -403,6 +488,13 @@ async def update_post(
     # 일반 유저는 본인 글만 수정 가능
     if post.user_id != current_user.id :
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+    # status가 open이 아닐시 수정 불가
+    if post.status != "open":
+        raise HTTPException(
+            status_code=403,
+            detail="현재 상태에서는 수정할 수 없습니다. (open 상태에서만 수정 가능)"
+        )
 
     # public 수정은 관리자만 가능
     if data.category == "public" and not is_admin:
@@ -437,7 +529,10 @@ description="""
 본인이 작성한 문의글을 삭제합니다.
 관리자는 모든 글 삭제 가능.
 
-응답 예시
+---
+
+### 응답 예시
+
 ```json
 {
   "success": true

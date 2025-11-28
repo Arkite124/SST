@@ -38,12 +38,10 @@ const CustomerCenter = () => {
             <h1 className="text-3xl font-bold text-green-700 mb-6">
                 자주 묻는 질문
             </h1>
-
             {/* 로딩 중 */}
             {loading && (
                 <LoadingSpinner/>
             )}
-
             {/* FAQ 목록 */}
             <div className="space-y-4">
                 {questions.map((q) => (
@@ -79,48 +77,39 @@ const CustomerCenter = () => {
 
             {/* 페이지네이션 */}
             <div className="flex justify-center items-center mt-8 space-x-2">
-                {/* 이전 버튼 */}
-                <button
-                    className={`px-3 py-1 rounded border ${
-                        page === 1
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white hover:bg-green-100 border-green-300"
-                    }`}
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                >
-                    이전
-                </button>
-
-                {/* 페이지 번호 */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (p) => (
-                        <button
-                            key={p}
-                            onClick={() => setPage(p)}
-                            className={`px-3 py-1 rounded border ${
-                                page === p
-                                    ? "bg-green-600 text-white border-green-600"
-                                    : "bg-white hover:bg-green-100 border-green-300"
-                            }`}
-                        >
-                            {p}
-                        </button>
-                    )
+                {/* 이전 버튼 (1페이지가 아니라면 표시) */}
+                {page > 1 && (
+                    <button
+                        className="px-3 py-1 rounded border bg-white hover:bg-green-100 border-green-300"
+                        onClick={() => setPage(page - 1)}
+                    >
+                        이전
+                    </button>
                 )}
 
-                {/* 다음 버튼 */}
-                <button
-                    className={`px-3 py-1 rounded border ${
-                        page === totalPages
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-white hover:bg-green-100 border-green-300"
-                    }`}
-                    disabled={page === totalPages}
-                    onClick={() => setPage(page + 1)}
-                >
-                    다음
-                </button>
+                {/* 페이지 번호 */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-1 rounded border ${
+                            page === p
+                                ? "bg-green-600 text-white border-green-600"
+                                : "bg-white hover:bg-green-100 border-green-300"
+                        }`}
+                    >
+                        {p}
+                    </button>
+                ))}
+                {/* 다음 버튼 (마지막 페이지가 아니라면 표시) */}
+                {page < totalPages && (
+                    <button
+                        className="px-3 py-1 rounded border bg-white hover:bg-green-100 border-green-300"
+                        onClick={() => setPage(page + 1)}
+                    >
+                        다음
+                    </button>
+                )}
             </div>
         </div>
     );

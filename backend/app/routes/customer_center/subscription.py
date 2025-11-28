@@ -66,7 +66,7 @@ class BillingConfirmRequest(BaseModel):
 - 구독 중이 아니면 `active: false` 반환
 - 다음 결제 예정 플랜(next_plan_name)이 있을 경우 함께 반환
 
-### Response 예시
+### 응답 예시
 ```json
 {
   "id": 1,
@@ -347,6 +347,14 @@ def change_plan(
 - 사용자 본인의 구독인지 확인
 - 상태(status)를 `canceled` 로 변경
 - 즉시 결제 종료되며, 다음 달 결제는 진행되지 않음
+
+---
+
+###응답 예시
+```json
+{
+    "message":"구독이 해지되었습니다"
+}
 """
 )
 def cancel_billing(
