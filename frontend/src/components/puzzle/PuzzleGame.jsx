@@ -65,9 +65,9 @@ const PuzzleGame = () => {
         return (
             <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
                 <div className="bg-white rounded-2xl p-10 max-w-lg w-full shadow-2xl text-center">
-                    <h2 className="text-4xl font-bold text-purple-600 mb-8">게임 종료!</h2>
+                    <h2 className="text-4xl font-bold text-lime-600 mb-8">게임 종료!</h2>
 
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-8 rounded-xl mb-6">
+                    <div className="bg-gradient-to-r from-lime-500 to-green-500 text-white p-8 rounded-xl mb-6">
                         <h3 className="text-lg opacity-90 mb-2">측정된 난이도</h3>
                         <p className="text-4xl font-bold">{avgAge}세 수준</p>
                     </div>
@@ -77,7 +77,7 @@ const PuzzleGame = () => {
                             <span className="block text-sm text-gray-600 mb-2">총 문제 수</span>
                             <span className="block text-2xl font-bold">{totalQuestions}개</span>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white p-5 rounded-lg">
+                        <div className="bg-gradient-to-br from-lime-500 to-green-500 text-white p-5 rounded-lg">
                             <span className="block text-sm opacity-90 mb-2">맞춘 문제</span>
                             <span className="block text-2xl font-bold">{correctCount}개</span>
                         </div>
@@ -85,7 +85,7 @@ const PuzzleGame = () => {
                             <span className="block text-sm text-gray-600 mb-2">정답률</span>
                             <span className="block text-2xl font-bold">{accuracy}%</span>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white p-5 rounded-lg">
+                        <div className="bg-gradient-to-br from-lime-500 to-green-500 text-white p-5 rounded-lg">
                             <span className="block text-sm opacity-90 mb-2">최종 점수</span>
                             <span className="block text-3xl font-bold">{score}점</span>
                         </div>
@@ -100,7 +100,7 @@ const PuzzleGame = () => {
 
                     <button
                         onClick={handleRestartGame}
-                        className="bg-purple-600 text-white px-10 py-3 rounded-lg text-lg font-bold hover:bg-purple-700 transition-all hover:-translate-y-1"
+                        className="bg-lime-600 text-white px-10 py-3 rounded-lg text-lg font-bold hover:bg-lime-700 transition-all hover:-translate-y-1"
                     >
                         다시 시작하기
                     </button>
@@ -118,7 +118,7 @@ const PuzzleGame = () => {
                         value={age}
                         onChange={(e) => dispatch({ type: 'puzzle/setAge', payload: Number(e.target.value) })}
                         disabled={loading}
-                        className="px-5 py-3 border-2 border-purple-400 rounded-lg text-lg transition-all focus:border-purple-600 focus:outline-none"
+                        className="px-5 py-3 border-2 border-lime-400 rounded-lg text-lg transition-all focus:border-lime-600 focus:outline-none"
                     >
                         {[4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((a) => (
                             <option key={a} value={a}>{a}세</option>
@@ -127,7 +127,7 @@ const PuzzleGame = () => {
                     <button
                         onClick={() => dispatch(generatePuzzle({ age,user_id }))}
                         disabled={loading}
-                        className="bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-purple-700 transition-all disabled:opacity-50 hover:-translate-y-1"
+                        className="bg-lime-600 text-white px-8 py-3 rounded-lg text-lg font-bold hover:bg-lime-700 transition-all disabled:opacity-50 hover:-translate-y-1"
                     >
                         {loading ? '로딩 중...' : '새 퍼즐 시작'}
                     </button>
@@ -139,11 +139,11 @@ const PuzzleGame = () => {
                 <div className="bg-white p-5 rounded-xl mb-6 shadow-lg">
                     <div className="flex justify-between items-center mb-3">
                         <span className="text-lg font-bold">문제 {currentQuestion + 1} / {totalQuestions}</span>
-                        <span className="text-purple-600 font-semibold">{age}세 수준</span>
+                        <span className="text-lime-600 font-semibold">{age}세 수준</span>
                     </div>
                     <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+                            className="h-full bg-gradient-to-r from-lime-500 to-green-500 transition-all duration-300"
                             style={{ width: `${((currentQuestion + 1) / totalQuestions) * 100}%` }}
                         />
                     </div>
@@ -180,13 +180,6 @@ const PuzzleGame = () => {
                 <>
                     <AnswerArea blocks={answerBlocks} onRemove={handleRemoveBlock} onDrop={handleAddBlock} />
 
-                    {/* 시도 횟수 */}
-                    {result && !result.passed && attempts < maxAttempts && (
-                        <div className="text-center py-3 bg-yellow-50 border-2 border-yellow-200 rounded-lg text-yellow-800 font-bold mb-4">
-                            남은 시도: {maxAttempts - attempts}회
-                        </div>
-                    )}
-
                     {/* 컨트롤 버튼들 - sourceBlocks가 모두 사용되었을 때만 표시 */}
                     {allBlocksUsed && (
                         <div className="flex gap-4 justify-center mb-6 flex-wrap">
@@ -201,7 +194,7 @@ const PuzzleGame = () => {
                             </button>
 
                             {result && (result.passed || attempts >= maxAttempts) && (
-                                <button onClick={handleNextQuestion} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-all">
+                                <button onClick={handleNextQuestion} className="px-8 py-3 bg-lime-600 text-white rounded-lg font-bold hover:bg-lime-700 transition-all">
                                     다음 문제
                                 </button>
                             )}
@@ -220,14 +213,14 @@ const PuzzleGame = () => {
             {/* 결과 표시 */}
             {result && (
                 <div className={`p-6 rounded-xl text-center mb-6 border-2 ${result.passed ? 'bg-green-50 text-green-800 border-green-300' : 'bg-red-50 text-red-800 border-red-300'}`}>
-                    <div className="text-xl font-bold mb-2">{result.message}</div>
+                    <div className="text-lg font-bold mb-2">{result.message}</div>
                     {result.passed ? (
                         <small className="text-sm">정답: {result.original_sentence}</small>
                     ) : (
-                        <div className="space-y-2">
-                            <div>당신의 답: {result.user_sentence}</div>
+                        <div className="space-y-2 text-orange-700">
+                            <div className="text-sm">당신의 답: {result.user_sentence}</div>
                             {attempts < maxAttempts ? (
-                                <p className="font-bold">한 번 더 도전해보세요!</p>
+                                <p className="font-bold text-lg text-red-800">한 번 더 도전해보세요!</p>
                             ) : (
                                 <div>정답: {result.original_sentence}</div>
                             )}

@@ -25,7 +25,7 @@ const SentencePuzzlePage = () => {
                         ← 목록으로
                     </GameButton>
                     <h1 className="font-juache text-3xl font-normal text-[#3d5919]">
-                        문장 퍼즐 게임
+                        문장 퍼즐
                     </h1>
                     <div className="w-20"></div>
                 </div>
@@ -52,7 +52,7 @@ const SentencePuzzlePage = () => {
                             />
                         </div>
                     </div>
-                    <div className="absolute top-[250px] right-[-198px] z-30">
+                    <div className="absolute top-[250px] right-[-200px] z-30">
                         <Bookmark tabs={gameTabs} type="game" />
                     </div>
                 </div>
