@@ -1,6 +1,6 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ModalProvider } from "@/contexts/ModalContext";   // ⭐ 추가
+import { ModalProvider } from "@/contexts/ModalContext.jsx";   // ⭐ 추가
 
 // 레이아웃
 import MainLayout from "./layouts/MainLayout";

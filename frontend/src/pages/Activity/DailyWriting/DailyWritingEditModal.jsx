@@ -1,106 +1,61 @@
-// src/pages/Activity/DailyWriting/DailyWritingEditModal.jsx
+// DailyWritingEditModal.jsx
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function DailyWritingEditModal({ writing, onSubmit }) {
-    const [content, setContent] = useState(writing.content || "");
-    const [mood, setMood] = useState(writing.mood || 5);
+    const { closeModal } = useModal();
     const [title, setTitle] = useState(writing.title || "");
-    const [attachment_url, setAttachment_url] = useState(writing.attachment_url || "");
-    const { alert, closeModal } = useModal();
+    const [content, setContent] = useState(writing.content || "");
+    const [mood, setMood] = useState(writing.mood || 3);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!content.trim()) {
-            await alert("입력 오류", "내용은 반드시 입력해야 합니다.");
-            return;
-        }
-
-        onSubmit({
-            title,
-            content,
-            mood,
-            attachment_url,
-        });
+    const handleSubmit = () => {
+        onSubmit({ title, content, mood });
         closeModal();
     };
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            {/* 백드롭 */}
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+            {/* 배경 반투명 */}
             <div
-                className="absolute inset-0 bg-black bg-opacity-50"
-                onClick={closeModal}
-            />
+                className="absolute inset-0 bg-black/30"
+                onClick={closeModal} // 배경 클릭 시 모달 닫기
+            ></div>
 
-            {/* 모달 컨텐츠 */}
-            <form
-                onSubmit={handleSubmit}
-                className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-6"
-            >
-                {/* 제목 */}
-                <div>
-                    <label>
-                        제목 수정
-                        <input
-                            type="text"
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                        />
-                    </label>
-                </div>
+            {/* 실제 모달 */}
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 space-y-4 z-[100000]">
+                <input
+                    type="text"
+                    placeholder="제목"
+                    className="w-full border rounded p-2"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                />
+                <textarea
+                    placeholder="내용"
+                    className="w-full border rounded p-2 h-40"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                />
+                <select
+                    value={mood}
+                    onChange={(e) => setMood(Number(e.target.value))}
+                    className="border rounded p-2"
+                >
+                    <option value={1}>😡</option>
+                    <option value={2}>😢</option>
+                    <option value={3}>😐</option>
+                    <option value={4}>😄</option>
+                    <option value={5}>😊</option>
+                </select>
 
-                {/* 내용 */}
-                <div>
-                    <label>
-                        내용 수정
-                        <textarea
-                            className="w-full border border-[#B4E197] rounded-xl p-2 focus:ring-2 focus:ring-[#4E944F] h-[200px] max-h-[200px] overflow-y-auto resize-none"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            required
-                        />
-                    </label>
+                <div className="flex justify-end gap-2">
+                    <Button variant="secondary" label="취소" onClick={closeModal} />
+                    <Button variant="primary" label="수정" onClick={handleSubmit} />
                 </div>
-
-                {/* 감정 */}
-                <div>
-                    <label>
-                        감정 수정
-                        <select
-                            value={mood}
-                            onChange={(e) => setMood(Number(e.target.value))}
-                            className="border border-[#B4E197] rounded-lg p-1 focus:ring-2 focus:ring-[#4E944F]"
-                        >
-                            <option value={5}>😊</option>
-                            <option value={4}>😄</option>
-                            <option value={3}>😐</option>
-                            <option value={2}>😢</option>
-                            <option value={1}>😡</option>
-                        </select>
-                    </label>
-                </div>
-
-                {/* 링크 */}
-                <div>
-                    <label>
-                        참고 링크
-                        <input
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem]"
-                            value={attachment_url}
-                            onChange={(e) => setAttachment_url(e.target.value)}
-                        />
-                    </label>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={closeModal} label="취소" />
-                    <Button type="submit" label="수정" />
-                </div>
-            </form>
-        </div>
+            </div>
+        </div>,
+        document.body
     );
 }

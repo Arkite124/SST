@@ -31,8 +31,8 @@ def analyze_only(request: AnalyzeRequest):
             "avg_sentence_len": analysis["avg_sentence_len"],
             "ttr": analysis["ttr"],
             "repeat_desc": analysis["repeat_desc"],
+            "counter_nouns": analysis["counter_nouns"],
+            "counter_verbs": analysis["counter_verbs"],
+            "counter_adjectives": analysis["counter_adjectives"]
         },
-        "counter_nouns": analysis["counter_nouns"],
-        "counter_verbs": analysis["counter_verbs"],
-        "counter_adjectives": analysis["counter_adjectives"]
     }

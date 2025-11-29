@@ -1,7 +1,7 @@
 // ReadingLogDetailModal.jsx
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function ReadingLogDetailModal({ log, onEdit, onDelete }) {
     const { closeModal } = useModal();

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function ReadingLogEditModal({ log, onSubmit }) {
     const [bookTitle, setBookTitle] = useState("");

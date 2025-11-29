@@ -74,7 +74,7 @@ def get_all_activities(
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    size: int = Query(5, ge=1, le=20),
+    size: int = Query(6, ge=1, le=20),
 ):
     if not current_user:
         raise HTTPException(401, "잘못된 접근입니다.")
@@ -373,11 +373,11 @@ def update_reading_log(
     if not log:
         raise HTTPException(status_code=404, detail="해당 독후감이 존재하지 않습니다.")
     cleaned_contents = log.cleaned_content
-    # ✅ 요청 데이터 검증
-    if not request.content or not request.content.strip():
-        raise HTTPException(status_code=400, detail="내용을 입력해 주세요.")
-    if request.content == log.content:
-        raise HTTPException(status_code=400, detail="수정된 내용이 없습니다!")
+    # 요청 데이터 검증
+    # if not request.content or not request.content.strip():
+    #     raise HTTPException(status_code=400, detail="내용을 입력해 주세요.")
+    # if request.content == log.content:
+    #     raise HTTPException(status_code=400, detail="수정된 내용이 없습니다!")
     if request.content and request.content != log.content:
         cleaned_contents = safe_spell_check(request.content)
     # 업데이트할 필드 목록

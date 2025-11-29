@@ -24,6 +24,7 @@ import readingReducer from "./slices/ReadingSlice.js";
 import vocabularyReducer from "./slices/vocabularySlice.js";
 import parentReducer from "./slices/parentSlice.js";
 import userBanReducer from "./slices/userBanSlice.js";
+import dailyWritingReducer from "./slices/dailyWritingSlice.js";
 // ✅ rootReducer
 const rootReducer = combineReducers({
     chain: chainReducer,   // 끝말잇기
@@ -36,13 +37,14 @@ const rootReducer = combineReducers({
     parent:parentReducer,
     userBans:userBanReducer,
     comment: commentReducer, // 댓글
+    dailyWriting: dailyWritingReducer,
 });
 
 // ✅ persistConfig (auth만 저장) 여기부터 안건들면 됩니다.
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ["auth"],
+    whitelist: ["auth", "dailyWriting"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

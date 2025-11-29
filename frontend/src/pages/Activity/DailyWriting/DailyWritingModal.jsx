@@ -1,109 +1,61 @@
+// DailyWritingModal.jsx
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function DailyWritingModal({ onSubmit }) {
-    const [content, setContent] = useState("");
-    const [mood, setMood] = useState(5);
+    const { closeModal } = useModal();
     const [title, setTitle] = useState("");
-    const [attachment_url, setAttachment_url] = useState("");
+    const [content, setContent] = useState("");
+    const [mood, setMood] = useState(3);
 
-    const { alert, closeModal } = useModal();
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!content.trim()) {
-            await alert("입력 오류", "내용을 입력해주세요!");
-            return;
-        }
-
-        const created_at = new Date().toISOString().split("T")[0];
-
-        onSubmit({ title, content, mood, created_at, attachment_url });
+    const handleSubmit = () => {
+        if (!title && !content) return;
+        onSubmit({ title, content, mood });
         closeModal();
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            {/* 백드롭 */}
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+            {/* 배경 반투명 */}
             <div
-                className="absolute inset-0 bg-black bg-opacity-50"
-                onClick={closeModal}
-            />
+                className="absolute inset-0 bg-black/30"
+                onClick={closeModal} // 배경 클릭 시 모달 닫기
+            ></div>
 
-            {/* 모달 박스 */}
-            <form
-                onSubmit={handleSubmit}
-                className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-6"
-            >
-                {/* ====== 기존 form 내용 그대로 ====== */}
+            {/* 실제 모달 */}
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 space-y-4 z-[100000]">
+                <input
+                    type="text"
+                    placeholder="제목"
+                    className="w-full border rounded p-2"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                />
+                <textarea
+                    placeholder="내용"
+                    className="w-full border rounded p-2 h-40"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                />
+                <select
+                    value={mood}
+                    onChange={(e) => setMood(Number(e.target.value))}
+                    className="border rounded p-2"
+                >
+                    <option value={1}>😡</option>
+                    <option value={2}>😢</option>
+                    <option value={3}>😐</option>
+                    <option value={4}>😄</option>
+                    <option value={5}>😊</option>
+                </select>
 
-                <div>
-                    <label>
-                        오늘의 일기 제목
-                        <input
-                            type="text"
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="오늘의 일기 제목은 뭔가요?"
-                            required
-                        />
-                    </label>
+                <div className="flex justify-end gap-2">
+                    <Button variant="secondary" label="취소" onClick={closeModal} />
+                    <Button variant="primary" label="작성" onClick={handleSubmit} />
                 </div>
-
-                <div>
-                    <label>
-                        오늘 하루는 어땠나요?
-                        <textarea
-                            className="w-full border border-[#B4E197] rounded-xl p-2 h-[300px] focus:ring-2 focus:ring-[#4E944F]
-               resize-none overflow-y-auto"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            placeholder="내용을 입력해주세요"
-                            required
-                        />
-
-                    </label>
-                </div>
-
-                <div className="flex justify-between items-center">
-                    <label className="text-gray-600 select-none">
-                        오늘의 감정
-                        <select
-                            value={mood}
-                            onChange={(e) => setMood(Number(e.target.value))}
-                            className="border border-[#B4E197] rounded-lg p-1 focus:ring-2 focus:ring-[#4E944F]"
-                            required
-                        >
-                            <option value={5}>😊</option>
-                            <option value={4}>😄</option>
-                            <option value={3}>😐</option>
-                            <option value={2}>😢</option>
-                            <option value={1}>😡</option>
-                        </select>
-                    </label>
-                </div>
-
-                {/*사진 넣는 부분*/}
-                {/*<div>*/}
-                {/*    <label>*/}
-                {/*        참고 링크*/}
-                {/*        <input*/}
-                {/*            className="w-full border border-[#B4E197] rounded-xl p-2 h-[3rem] focus:ring-2 focus:ring-[#4E944F]"*/}
-                {/*            value={attachment_url}*/}
-                {/*            onChange={(e) => setAttachment_url(e.target.value)}*/}
-                {/*            placeholder="함께 본 사이트 링크가 있다면 입력해주세요"*/}
-                {/*        />*/}
-                {/*    </label>*/}
-                {/*</div>*/}
-
-                <div className="flex justify-end gap-3">
-                    <Button variant="secondary" onClick={closeModal} label="취소" />
-                    <Button type="submit" label="등록" />
-                </div>
-            </form>
+            </div>
         </div>,
         document.body
     );

@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "@/utils/axiosInstance.js";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import { toast } from "react-toastify";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 import {useSelector} from "react-redux";
 import useCheckUser from "@/hooks/useCheckUser.jsx";   // ⭐ 통합 모달 사용
 
