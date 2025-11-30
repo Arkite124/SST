@@ -50,6 +50,7 @@ class DailyWritingListResponse(BaseModel):
     items: List[DailyWritingRead]
     class Config:
         from_attributes = True
+
 class ReadingLogBase(BaseModel):
     book_title: str                    # nullable=False
     author: Optional[str] = None        # nullable=True
@@ -73,17 +74,6 @@ class ReadingLogUpdate(BaseModel):
     cleaned_content: Optional[str] = None
     sentiment: Optional[str] = None
     unknown_sentence: Optional[str] = None
-
-
-class ReadingLogInDB(ReadingLogBase):
-    id: int
-    user_id: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
 
 class ReadingLogWithBook(BaseModel):
     id: int

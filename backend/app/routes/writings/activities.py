@@ -732,7 +732,21 @@ def update_reading_log(
     if request.content == log.content or request.content==" ":
         raise HTTPException(status_code=400, detail="수정된 내용이 없습니다!")
     if request.content and request.content != log.content:
-        cleaned_contents = safe_spell_check(request.content)
+        # ------------------------
+        # content 수정될 경우 clean-content 호출
+        # ------------------------
+        try:
+            response = requests.post(
+                f"{api_url}/app/clean-content",
+                json={"content": request.content},
+                timeout=10
+            )
+            response.raise_for_status()
+            clean_contents = response.json().get("cleaned_content", request.content)
+            log.cleaned_content = clean_contents
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] 외부 API 요청 실패: {e}")
+            raise HTTPException(status_code=502, detail={"message": "외부 문장 분석 서버 연결 실패"})
     # 업데이트할 필드 목록
     update_fields = {
         "book_title": request.book_title,
