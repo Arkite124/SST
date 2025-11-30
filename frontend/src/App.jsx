@@ -56,6 +56,13 @@ import UserBanManager from "./pages/Admin/UserBanManager";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
 import Social from "@/pages/Auth/Register/Social.jsx";
 import CustomerCenter from "@/pages/CustomerCenter/CustomerCenter.jsx";
+import AdminSupportList from "@/pages/Admin/AdminSupportList.jsx";
+import AdminSupportDetail from "@/pages/Admin/AdminSupportDetail.jsx";
+import SupportLayout from "@/pages/CustomerCenter/SupportLayout.jsx";
+import CustomerSupport from "@/pages/CustomerCenter/CustomerSupport.jsx";
+import MyQuestionList from "@/pages/CustomerCenter/MyQuestionList.jsx";
+import MyQuestionDetail from "@/pages/CustomerCenter/MyQuestionDetail.jsx";
+import MyQuestionEdit from "@/pages/CustomerCenter/MyQuestionEdit.jsx";
 
 function App() {
     return (
@@ -122,10 +129,21 @@ function App() {
                             <Route index element={<AdminDashboard />} />
                             <Route path="dashboard" element={<AdminDashboard />} />
                             <Route path="user_ban" element={<UserBanManager />} />
+                            <Route path={"support"} element={<AdminSupportList/>}/>
+                            <Route path={"support/:id"} element={<AdminSupportDetail/>}/>
                         </Route>
                         {/* 고객센터 */}
-                        <Route path="support" element={<CustomerCenter />}>
+                        <Route path="support" element={<SupportLayout/>}>
+                            {/* 기본 페이지: FAQ */}
                             <Route index element={<CustomerCenter />} />
+                            {/* 문의 작성 */}
+                            <Route path="write" element={<CustomerSupport />} />
+                            {/* 내 문의 목록 */}
+                            <Route path="my" element={<MyQuestionList />} />
+                            {/* 문의 상세 */}
+                            <Route path="my/:postId" element={<MyQuestionDetail />} />
+                            {/* 문의 수정 */}
+                            <Route path="my/:postId/edit" element={<MyQuestionEdit />} />
                         </Route>
 
                         {/* 로그인 */}

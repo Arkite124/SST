@@ -2,10 +2,11 @@
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
 import { useModal } from "@/contexts/ModalContext";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function ReadingLogDetailModal({ log, onEdit, onDelete }) {
+    useCheckUser();
     const { closeModal } = useModal();
-
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
             {/* 백드롭 */}

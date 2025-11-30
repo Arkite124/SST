@@ -1,53 +1,81 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     setCategory,
     setTitle,
     setContent,
     resetForm,
-    createSupportPost } from "@/redux/Slices/supportSlice";
+    fetchSupportPostDetail,
+    updateSupportPost,
+} from "@/redux/slices/supportSlice";
 import { useModal } from "@/contexts/ModalContext.jsx";
+import { useNavigate, useParams } from "react-router-dom";
+import LoadingSpinner from "@/components/common/LoadingSpinner.jsx";
 import useCheckUser from "@/hooks/useCheckUser.jsx";
 
-const CustomerSupport = () => {
+const MyQuestionEdit = () => {
     useCheckUser();
+    const { postId } = useParams();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { alert, confirm } = useModal();
-    const { category, title, content, loading } = useSelector(
-        (state) => state.support
-    );
-    // 제출 처리
+    const {
+        category,
+        title,
+        content,
+        loading,
+        postDetail,
+    } = useSelector((state) => state.support);
+    // 수정 화면에 기존 내용 불러오기
+    useEffect(() => {
+        dispatch(fetchSupportPostDetail(postId))
+            .unwrap()
+            .then((res) => {
+                dispatch(setCategory(res.category));
+                dispatch(setTitle(res.title));
+                dispatch(setContent(res.content));
+            })
+            .catch(() => {
+                alert("오류", "데이터를 불러오지 못했습니다.");
+            });
+    }, [postId]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!title.trim()) {
-            return alert("등록 실패", "제목을 입력해 주세요.");
+            return alert("수정 실패", "제목을 입력해주세요.");
         }
         if (!content.trim()) {
-            return alert("등록 실패", "내용을 입력해 주세요.");
+            return alert("수정 실패", "내용을 입력해주세요.");
         }
 
         try {
             await dispatch(
-                createSupportPost({
+                updateSupportPost({
+                    postId,
                     category,
                     title,
                     content,
                 })
             ).unwrap();
+            confirm("수정 완료", "문의 내용이 정상적으로 수정되었습니다!");
+            // 원하면 상세 페이지로 이동
+            navigate(`/support/${postId}`);
 
-            confirm("등록 성공", "문의가 정상적으로 등록되었습니다!");
-            dispatch(resetForm()); // 폼 초기화
+            dispatch(resetForm());
         } catch (err) {
-            alert("등록 실패", err?.detail || "문의 등록에 실패했습니다.");
+            alert("수정 실패", err?.detail || "문의 수정에 실패했습니다.");
         }
     };
 
+    if (loading && !postDetail) return <LoadingSpinner />;
+
     return (
         <form onSubmit={handleSubmit} className="p-4">
-            <h2 className="text-lg font-bold mb-4">문의 등록</h2>
+            <h2 className="text-lg font-bold mb-4">문의 수정</h2>
 
-            {/* Category */}
+            {/* 카테고리 */}
             <label className="text-sm font-semibold">카테고리</label>
             <select
                 value={category}
@@ -61,7 +89,7 @@ const CustomerSupport = () => {
                 <option value="etc">기타 문의</option>
             </select>
 
-            {/* Title */}
+            {/* 제목 */}
             <label className="text-sm font-semibold">제목</label>
             <input
                 className="border p-2 rounded w-full text-sm mb-3"
@@ -70,7 +98,7 @@ const CustomerSupport = () => {
                 placeholder="제목을 입력해주세요."
             />
 
-            {/* Content */}
+            {/* 내용 */}
             <label className="text-sm font-semibold">내용</label>
             <textarea
                 className="border p-2 rounded w-full text-sm mb-3 resize-none h-40"
@@ -85,10 +113,10 @@ const CustomerSupport = () => {
                     loading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
                 }`}
             >
-                {loading ? "등록 중..." : "등록하기"}
+                {loading ? "수정 중..." : "수정하기"}
             </button>
         </form>
     );
 };
 
-export default CustomerSupport;
+export default MyQuestionEdit;

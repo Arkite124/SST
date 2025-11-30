@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from models import UserBans as UserBan, Users
 # Base Schemas
 # ---------------------------------------------------------
 class UserBanBase(BaseModel):
+    id: Optional[int] = None
     user_id: int
     reason: str
     start_date: Optional[datetime] = None
@@ -25,7 +26,7 @@ class UserBanCreate(UserBanBase):
 
 
 class UserBanRead(UserBanBase):
-    id: int
+    id: Optional[int] = None
     banned_by: Optional[int]
     is_auto: bool
     status: str
@@ -54,6 +55,7 @@ def list_bans_with_user(db: Session, page: int = 1, size: int = 10):
 
     query = (
         db.query(
+            UserBan.id,
             UserBan.user_id,
             Users.nickname,
             UserBan.reason,
@@ -71,6 +73,7 @@ def list_bans_with_user(db: Session, page: int = 1, size: int = 10):
     return {
         "items": [
             {
+                "id":q.id,
                 "user_id": q.user_id,
                 "nickname": q.nickname,
                 "reason": q.reason,
@@ -120,7 +123,7 @@ router = APIRouter(prefix="/admin/users", tags=["User Ban"])
 - 사유(reason), 시작일(start_date), 종료일(end_date), 메모(notes) 입력 가능  
 - 자동 벤(is_auto) 값도 포함 가능  
 - banned_by 필드는 자동으로 관리자 ID로 설정
-
+- end_date 설정 안할시 자동 1주일로 설정
 ---
 
 ### 응답 예시
@@ -140,6 +143,9 @@ db: Session = Depends(get_db),
 current_admin=Depends(get_current_admin)
 ):
     ban.banned_by = current_admin.id
+    # ⭐ end_date가 없으면 기본 7일 후로 설정
+    if not ban.end_date:
+        ban.end_date = datetime.utcnow() + timedelta(days=7)
     return create_ban_record(db, ban)
 
 #=========================================================
@@ -147,6 +153,7 @@ current_admin=Depends(get_current_admin)
 #=========================================================
 
 class SimpleUserBan(BaseModel):
+    id: Optional[int] = None
     user_id: int
     nickname: str
     reason: str
@@ -179,6 +186,7 @@ description="""
 {
   "items": [
     {
+      "id": 4,
       "user_id": 21,
       "nickname": "새싹이",
       "reason": "비속어 사용",
@@ -270,4 +278,8 @@ current_admin=Depends(get_current_admin)
     ban = lift_ban_record(db, ban_id)
     if not ban:
         raise HTTPException(status_code=404, detail="해당 벤을 찾지 못했습니다.")
+    ban.status = "lifted"
+    ban.end_date = datetime.now()
+    db.commit()
+    db.refresh(ban)
     return ban

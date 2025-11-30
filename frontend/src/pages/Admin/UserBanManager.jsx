@@ -36,6 +36,7 @@ export default function UserBanManager() {
                 user_id: Number(newBan.user_id),
                 reason: newBan.reason,
                 notes: newBan.notes,
+                end_date: newBan.end_date ? new Date(newBan.end_date).toISOString() : null,
             })
         );
         setNewBan({ user_id: "", reason: "", notes: "" });
@@ -87,6 +88,14 @@ export default function UserBanManager() {
                     }
                     className="border p-2 rounded w-full"
                 />
+                <input
+                    type="datetime-local"
+                    value={newBan.end_date}
+                    onChange={(e) =>
+                        setNewBan({ ...newBan, end_date: e.target.value })
+                    }
+                    className="border p-2 rounded w-full"
+                />
                 <button
                     type="submit"
                     className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
@@ -133,7 +142,7 @@ export default function UserBanManager() {
                                 {canLift ? (
                                     <button
                                         onClick={() =>
-                                            handleLiftBan(ban.user_id)
+                                            handleLiftBan(ban.id)
                                         }
                                         className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
                                     >

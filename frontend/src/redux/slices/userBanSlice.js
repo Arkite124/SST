@@ -1,16 +1,11 @@
 // src/store/slices/userBanSlice.js
-import axios from "axios";
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-
-const api = axios.create({
-    baseURL: "http://localhost:8000/admin/users",
-    withCredentials: true,
-});
+import axiosInstance from "@/utils/axiosInstance.js";
 
 // --- Thunks ---
 export const fetchBans = createAsyncThunk("userBan/fetchBans", async ({ page, size }) => {
     try {
-        const res = await api.get(`/bans?page=${page}&size=${size}`);
+        const res = await axiosInstance.get(`/admin/users/bans?page=${page}&size=${size}`);
         return res.data;
     } catch (err) {
         throw err;
@@ -18,12 +13,12 @@ export const fetchBans = createAsyncThunk("userBan/fetchBans", async ({ page, si
 });
 
 export const createBan = createAsyncThunk("userBan/createBan", async (data, { dispatch }) => {
-    await api.post("/bans", data);
+    await axiosInstance.post("/admin/users/bans", data);
     dispatch(fetchBans({ page: 1, size: 10 }));
 });
 
 export const liftBan = createAsyncThunk("userBan/liftBan", async (banId, { dispatch }) => {
-    await api.patch(`/bans/${banId}`);
+    await axiosInstance.patch(`/admin/users/bans/${banId}`);
     dispatch(fetchBans({ page: 1, size: 10 }));
 });
 

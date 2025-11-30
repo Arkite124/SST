@@ -24,6 +24,8 @@ import readingReducer from "./slices/ReadingSlice.js";
 import vocabularyReducer from "./slices/vocabularySlice.js";
 import parentReducer from "./slices/parentSlice.js";
 import userBanReducer from "./slices/userBanSlice.js";
+import supportReducer from "./slices/supportSlice.js";
+import supportAdminReducer from "./slices/supportAdminSlice.js";
 // ✅ rootReducer
 const rootReducer = combineReducers({
     chain: chainReducer,   // 끝말잇기
@@ -36,6 +38,8 @@ const rootReducer = combineReducers({
     parent:parentReducer,
     userBans:userBanReducer,
     comment: commentReducer, // 댓글
+    support: supportReducer, // 고객센터
+    supportAdmin:supportAdminReducer //관리자 고객센터
 });
 
 // ✅ persistConfig (auth만 저장) 여기부터 안건들면 됩니다.

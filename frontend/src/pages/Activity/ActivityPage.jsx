@@ -8,7 +8,6 @@ export default function ActivityPage() {
         { name: "일기", path: "daily-writing" },
         { name: "어휘 검색", path: "word-search" },
     ];
-
     return (
         <div className="flex flex-col min-h-screen relative w-full bg-[#F8FAF4]">
 

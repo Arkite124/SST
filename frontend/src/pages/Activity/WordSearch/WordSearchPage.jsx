@@ -15,7 +15,6 @@ export default function WordSearchPage() {
     const [error, setError] = useState("");
     const navigate = useNavigate();
     useAuthLoad()
-    useCheckUser();
     const { alert } = useModal();
 
     // 🔍 단어 검색

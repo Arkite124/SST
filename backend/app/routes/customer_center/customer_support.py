@@ -337,6 +337,7 @@ FAQ(public)	누구나
 {
   "id": 44,
   "title": "결제가 안됩니다",
+  "category": "payment_error",
   "content": "카드 오류가 뜹니다",
   "status": "in_progress",
   "comments": [
@@ -391,7 +392,7 @@ async def get_post(
     )
 
     def build_comment_tree(comment):
-        """대댓글 트리 재귀 생성"""
+        """대댓글 트리 재귀 생성, 1:1 질의답변 구조라 상관 없음"""
         return {
             "id": comment.id,
             "user_id": comment.user_id,
@@ -455,6 +456,7 @@ description="""
 ### 요청 예시
 ```json
 {
+  "category": "payment_error",
   "title": "문의드립니다 (수정됨)",
   "content": "추가 설명입니다."
 }
@@ -465,7 +467,9 @@ description="""
 
 ### 응답 예시
 ```json
-{
+{  
+  "id": 15,
+  "category": "payment_error",
   "title": "문의드립니다 (수정됨)",
   "content": "추가 설명입니다."
 }
@@ -560,3 +564,61 @@ async def delete_post(
     db.commit()
 
     return {"success": True}
+
+@router.post("/comments", summary="댓글/답글 작성")
+async def create_comment(
+    data: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: Users = Depends(get_current_user)
+):
+    # 게시글 찾기
+    post = db.query(CustomerSupportPosts).filter(CustomerSupportPosts.id == data.post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    # 🔐 접근 권한
+    if post.category != "public":
+        if post.user_id != current_user.id and current_user.role != "admin":
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
+
+    # 🔒 소비자 댓글 제한
+    if current_user.role == "customer":
+        if post.status not in ("resolved", "closed"):
+            raise HTTPException(
+                status_code=403,
+                detail="관리자 답변이 완료된 후에만 댓글을 작성할 수 있습니다."
+            )
+
+    # 대댓글 부모 체크
+    if data.reply_id:
+        parent = (
+            db.query(CustomerSupportComments)
+            .filter(CustomerSupportComments.id == data.reply_id)
+            .first()
+        )
+        if not parent:
+            raise HTTPException(status_code=404, detail="부모 댓글을 찾을 수 없습니다.")
+
+    # 댓글 생성
+    new_comment = CustomerSupportComments(
+        post_id=data.post_id,
+        user_id=current_user.id,
+        content=data.content,
+        reply_id=data.reply_id
+    )
+
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return {
+        "id": new_comment.id,
+        "content": new_comment.content,
+        "created_at": new_comment.created_at,
+        "reply_id": new_comment.reply_id,
+        "user": {
+            "id": current_user.id,
+            "nickname": current_user.nickname,
+            "role": current_user.role
+        }
+    }

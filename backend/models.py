@@ -135,8 +135,6 @@ class DailyWritings(Base):
     attachment_url = mapped_column(String(255))
 
     user: Mapped[Optional['Users']] = relationship('Users', back_populates='daily_writings')
-    outputs: Mapped[List['Outputs']] = relationship('Outputs', uselist=True, back_populates='content')
-    user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='content')
 
 class ParentForumPosts(Base):
     __tablename__ = 'parent_forum_posts'
@@ -385,40 +383,56 @@ class UserWordTotal(Users):
 class Outputs(Base):
     __tablename__ = 'outputs'
     __table_args__ = (
-        ForeignKeyConstraint(['content_id'], ['daily_writings.id'], name='outputs_content_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='outputs_user_id_fkey'),
-        PrimaryKeyConstraint('outputs_id', name='outputs_pkey')
+        ForeignKeyConstraint(
+            ['user_id'], ['users.id'],
+            ondelete='CASCADE',
+            name='outputs_user_id_fkey'
+        ),
+        PrimaryKeyConstraint('outputs_id', name='outputs_pkey'),
     )
-
-    outputs_id = mapped_column(Uuid, server_default=text('gen_random_uuid()'))
-    user_id = mapped_column(Integer)
-    content_id = mapped_column(Integer)
-    timestamp = mapped_column(DateTime(True), server_default=text('now()'))
-    analysis_result = mapped_column(JSONB)
-
-    content: Mapped[Optional['DailyWritings']] = relationship('DailyWritings', back_populates='outputs')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='outputs')
-    user_word_usage: Mapped[List['UserWordUsage']] = relationship('UserWordUsage', uselist=True, back_populates='outputs')
-
+    outputs_id = mapped_column(Uuid, server_default=text('gen_random_uuid()'), primary_key=True)
+    user_id = mapped_column(Integer, nullable=False)
+    # daily / reading / future 확장 가능
+    category = mapped_column(String(20), nullable=False)  # 'daily', 'reading'
+    # daily or reading table ID
+    content_id = mapped_column(Integer, nullable=False)
+    timestamp = mapped_column(
+        DateTime(timezone=True),
+        server_default=text('now()')
+    )
+    # 여기에 모든 분석 결과 저장
+    analysis_result = mapped_column(JSONB, nullable=False)
+    # 관계 (선택적, viewonly)
+    daily = relationship(
+        'DailyWritings',
+        primaryjoin="and_(Outputs.content_id == foreign(DailyWritings.id), Outputs.category=='daily')",
+        viewonly=True
+    )
+    reading = relationship(
+        'ReadingLogs',
+        primaryjoin="and_(Outputs.content_id == foreign(ReadingLogs.id), Outputs.category=='reading')",
+        viewonly=True
+    )
+    user = relationship('Users', back_populates='outputs')
 
 class UserWordUsage(Base):
     __tablename__ = 'user_word_usage'
     __table_args__ = (
-        CheckConstraint("category::text = ANY (ARRAY['daily'::character varying, 'reading'::character varying]::text[])", name='user_word_usage_category_check'),
-        ForeignKeyConstraint(['content_id'], ['daily_writings.id'], ondelete='CASCADE', name='user_word_usage_content_id_fkey'),
-        ForeignKeyConstraint(['outputs_id'], ['outputs.outputs_id'], ondelete='CASCADE', name='user_word_usage_outputs_id_fkey'),
-        ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='user_word_usage_user_id_fkey'),
-        PrimaryKeyConstraint('usage_id', name='user_word_usage_pkey')
+        CheckConstraint(
+            "category IN ('daily','reading')",
+            name="user_word_usage_category_check"
+        ),
+        ForeignKeyConstraint(
+            ['user_id'], ['users.id'],
+            ondelete='CASCADE'
+        ),
+        PrimaryKeyConstraint('usage_id'),
     )
-
     usage_id = mapped_column(Uuid, server_default=text('gen_random_uuid()'))
-    outputs_id = mapped_column(Uuid)
-    user_id = mapped_column(Integer)
-    content_id = mapped_column(Integer)
-    word = mapped_column(String(50))
-    category = mapped_column(String(10))
-    created_at = mapped_column(Date)
-
-    content: Mapped[Optional['DailyWritings']] = relationship('DailyWritings', back_populates='user_word_usage')
-    outputs: Mapped[Optional['Outputs']] = relationship('Outputs', back_populates='user_word_usage')
-    user: Mapped[Optional['Users']] = relationship('Users', back_populates='user_word_usage')
+    user_id = mapped_column(Integer, nullable=False)
+    content_id = mapped_column(Integer, nullable=False)
+    # analysis_result -> word_list를 받아서 저장
+    analysis_result = mapped_column(JSONB, nullable=False)
+    # 카테고리(daily / reading)
+    category = mapped_column(String(10), nullable=False)
+    created_at = mapped_column(Date, server_default=text('CURRENT_DATE'))

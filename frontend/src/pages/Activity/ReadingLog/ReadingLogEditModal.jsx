@@ -3,8 +3,10 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Button from "@/components/common/Button";
 import { useModal } from "@/contexts/ModalContext";
+import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function ReadingLogEditModal({ log, onSubmit }) {
+    useCheckUser();
     const [bookTitle, setBookTitle] = useState("");
     const [author, setAuthor] = useState("");
     const [publisher, setPublisher] = useState("");
