@@ -32,13 +32,18 @@ class DailyWritingCreate(BaseModel):
     created_at: Optional[datetime] = Field(default_factory=datetime.now)  # 없을시 현재 시각 자동 입력
     attachment_url: Optional[str] = None
     cleaned_content: Optional[str] = None
+    mood: Optional[int] = None
 
 class DailyWritingUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    mood: Optional[int] = None
 
 class DailyWritingRead(DailyWritingBase):
-    pass
+    id: int
+
+    class Config:
+        from_attributes = True
 
 class DailyWritingListResponse(BaseModel):
     total: int

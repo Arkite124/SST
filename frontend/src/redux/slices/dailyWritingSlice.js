@@ -6,12 +6,16 @@ import axiosInstance from "@/utils/axiosInstance.js";
 // ---------------------
 export const fetchDailyWritings = createAsyncThunk(
     "dailyWriting/fetchDailyWritings",
-    async ({ page = 1, size = 6 } = {}, { rejectWithValue }) => {
+    async ({ page = 1, size = 6, selectedDate = null } = {}, { rejectWithValue }) => {
         try {
-            const res = await axiosInstance.get("/activities/list/daily_writing", {
-                params: { page, size },
-            });
-            return res.data; // { total, page, size, items }
+            const params = { page, size };
+
+            // 날짜 필터링 활성화
+            if (selectedDate) params.selected_date = selectedDate;
+
+            const res = await axiosInstance.get("/activities/list/daily_writing", { params });
+
+            return res.data;
         } catch (err) {
             return rejectWithValue(err.response?.data || "Failed to fetch");
         }
@@ -23,7 +27,7 @@ export const addDailyWriting = createAsyncThunk(
     async (data, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.post("/activities/list/daily_writing", data);
-            return res.data; // 서버에서 반환한 실제 객체
+            return res.data;
         } catch (err) {
             return rejectWithValue(err.response?.data || "Failed to add");
         }
@@ -35,7 +39,7 @@ export const editDailyWriting = createAsyncThunk(
     async ({ id, data }, { rejectWithValue }) => {
         try {
             const res = await axiosInstance.patch(`/activities/list/daily_writing/${id}`, data);
-            return res.data; // 서버에서 반환한 최신 객체
+            return res.data;
         } catch (err) {
             return rejectWithValue(err.response?.data || "Failed to edit");
         }
@@ -54,6 +58,7 @@ export const deleteDailyWriting = createAsyncThunk(
     }
 );
 
+
 // ---------------------
 // Slice
 // ---------------------
@@ -64,6 +69,7 @@ const dailyWritingSlice = createSlice({
         total: 0,
         page: 1,
         size: 6,
+        selectedDate: null,   // ★ 추가됨
         loading: false,
         error: null,
     },
@@ -71,9 +77,9 @@ const dailyWritingSlice = createSlice({
         setPage: (state, action) => {
             state.page = action.payload;
         },
-        setSize: (state, action) => {
-            state.size = action.payload;
-        },
+        setSelectedDate: (state, action) => {
+            state.selectedDate = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -114,5 +120,5 @@ const dailyWritingSlice = createSlice({
     },
 });
 
-export const { setPage, setSize } = dailyWritingSlice.actions;
+export const { setPage, setSelectedDate } = dailyWritingSlice.actions;
 export default dailyWritingSlice.reducer;

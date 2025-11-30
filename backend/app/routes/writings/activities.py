@@ -7,14 +7,17 @@ from numba.core.types import unknown
 from sqlalchemy.orm import Session
 from sqlalchemy import select, literal
 from sqlalchemy.sql import union_all
-from models import DailyWritings as DailyWriting, ReadingLogs, Users
+from models import DailyWritings as DailyWriting, ReadingLogs, Users, Outputs, UserWordUsage
 from app.routes.login.login import get_current_user
 from app.routes.writings.activities_base_model import *
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from datetime import datetime
+
 from Ai.ai_common.clean_contents import safe_spell_check
 import requests
+from fastapi import Query
+from sqlalchemy import func
+from datetime import datetime, date, timedelta
 
 from app.routes.writings.activities_base_model import DailyWritingListResponse, ReadingLogWithBook, \
     ReadingLogUpdate
@@ -143,22 +146,24 @@ def daily_list(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     size: int = Query(5, ge=1, le=20),
+    selected_date: str | None = Query(None, description="YYYY-MM-DD 형식의 필터링 날짜")
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
 
-    user_id = current_user.id
+    user_id = int(current_user.id)
     offset = get_offset(page, size)
 
-    total = db.query(DailyWriting).filter(DailyWriting.user_id == user_id).count()
-    items = (
-        db.query(DailyWriting)
-        .filter(DailyWriting.user_id == user_id)
-        .order_by(DailyWriting.created_at.desc())
-        .offset(offset)
-        .limit(size)
-        .all()
-    )
+    query = db.query(DailyWriting).filter(DailyWriting.user_id == user_id)
+
+    # 날짜 필터링 (시간 무시, 날짜만 비교)
+    if selected_date:
+        query = query.filter(
+            func.date(DailyWriting.created_at)
+            == func.to_date(selected_date, "YYYY-MM-DD")
+        )
+    total = query.count()
+    items = query.order_by(DailyWriting.created_at.desc()).offset(offset).limit(size).all()
 
     return {"total": total, "page": page, "size": size, "items": items}
 
@@ -172,15 +177,40 @@ def daily_detail(list_id: int, current_user: Users = Depends(get_current_user), 
         raise HTTPException(404, "내역이 없거나 잘못된 접근입니다.")
     return writing
 
+api_url=os.getenv("API_URL")
 @router.post("/list/daily_writing", response_model=DailyWritingRead)
-def daily_create(request: DailyWritingCreate, current_user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
+def daily_create(
+    request: DailyWritingCreate,
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     if not current_user:
-        raise HTTPException(status_code=401, detail={"message":"로그인이 필요합니다."})
+        raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
+
     user_id = current_user.id
+
+    # 내용 비어있는지 체크
     if request.content in (" ", "\n", None):
         raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
-    clean_contents=safe_spell_check(request.content)
-    print(request)
+
+    # ------------------------
+    # 1) clean-content 호출
+    # ------------------------
+    try:
+        response = requests.post(
+            f"{api_url}/app/clean-content",
+            json={"content": request.content},
+            timeout=10
+        )
+        response.raise_for_status()
+        clean_contents = response.json().get("cleaned_content", request.content)
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 텍스트 분석 서버 연결 실패"})
+
+    # ------------------------
+    # 2) daily_writing 저장(DB)
+    # ------------------------
     writing = DailyWriting(
         title=request.title,
         content=request.content,
@@ -193,26 +223,105 @@ def daily_create(request: DailyWritingCreate, current_user: Users = Depends(get_
     db.add(writing)
     db.commit()
     db.refresh(writing)
-    # 해당 함수(단어 분석, 저장 함수)
+
+    # ------------------------
+    # 3) 문장 전체 분석(analyze-result)
+    # ------------------------
+    try:
+        response = requests.post(
+            f"{api_url}/app/analyze-result",
+            json={
+                "user_id": current_user.id,
+                "cleaned_content": clean_contents
+            },
+            timeout=10
+        )
+        response.raise_for_status()
+        new_output = response.json()
+
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 문장 분석 서버 연결 실패"})
+    # Outputs 저장
+    db_output = Outputs(
+        user_id=current_user.id,
+        category="daily",
+        content_id=writing.id,
+        analysis_result=new_output["analysis_result"]
+    )
+    db.add(db_output)
+    db.commit()
+    db.refresh(db_output)
+    # ------------------------
+    # 4) 단어 분석(analyze-text)
+    # ------------------------
+    try:
+        response = requests.post(
+            f"{api_url}/app/analyze-text",
+            json={
+                "title": request.title,
+                "content": request.content,
+                "user_id": current_user.id
+            },
+            timeout=10
+        )
+        response.raise_for_status()
+        response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 단어 분석 서버 연결 실패"})
+    # UserWordUsage 저장
+    db.add(UserWordUsage(
+        user_id=current_user.id,
+        content_id=writing.id,
+        analysis_result=response_data["words_list"],
+        category="daily"
+    ))
+    db.commit()
+    db.refresh(writing)
     return writing
 
+
 @router.patch("/list/daily_writing/{list_id}", response_model=DailyWritingRead)
-def daily_patch(list_id: int, request: DailyWritingUpdate, current_user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
+def daily_patch(
+        list_id: int,
+        request: DailyWritingUpdate,
+        current_user: Users = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
     if not current_user:
-        raise HTTPException(status_code=401, detail={"message":"로그인이 필요합니다."})
+        raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
+
     user_id = current_user.id
-    writing = db.query(DailyWriting).filter(DailyWriting.id == list_id, DailyWriting.user_id == user_id).first()
+    writing = db.query(DailyWriting).filter(
+        DailyWriting.id == list_id,
+        DailyWriting.user_id == user_id
+    ).first()
+
     if not writing:
         raise HTTPException(404, "해당 일기는 존재하지 않습니다.")
-    if writing.id != request.id:
-        raise HTTPException(status_code=401, detail={"message": "잘못된 요청입니다."})
-    if request.content in (" ", "\n", None):
-        raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
-    if request.content == writing.content:
-        raise HTTPException(status_code=400, detail={"message": "수정된 내용이 없습니다!"})
-    if writing.content != request.content:
+
+    # ✅ 각 필드를 선택적으로 업데이트
+    updated = False
+
+    if request.title is not None:
+        writing.title = request.title
+        updated = True
+
+    if request.content is not None:
+        if not request.content or request.content.strip() in ("", " ", "\n"):
+            raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
         writing.content = request.content
         writing.cleaned_content = safe_spell_check(request.content)
+        updated = True
+
+    if request.mood is not None:
+        writing.mood = request.mood
+        updated = True
+
+    if not updated:
+        raise HTTPException(status_code=400, detail={"message": "수정할 내용이 없습니다."})
+
     db.commit()
     db.refresh(writing)
     return writing
@@ -332,10 +441,31 @@ def create_reading_log(request: ReadingLogCreate, current_user: Users = Depends(
         raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
     if request.book_title in (" ", "\n", None):
         raise HTTPException(status_code=400, detail={"message": "책의 제목을 입력해 주세요."})
-    clean_contents=safe_spell_check(request.content)
-    # API 호출
-    # resp_sentiment=resp.json
-    # sentiment=resp_sentiment["sentiment"]
+    # clean_contents=safe_spell_check(request.content)
+    # API 호출 구문
+    try:
+        response = requests.post(
+            f"{api_url}/app/clean-content",
+            json={"content": request.content},  # 외부 API가 받는 형식에 맞게 전달
+            timeout=10
+        )
+        response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+        clean_contents = response.json().get("cleaned_content", request.content)
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 텍스트 분석 서버 연결 실패"})
+    try:
+        response = requests.post(
+            f"{api_url}/app/analyze-sentiment",
+            json={"book_title":request.book_title,
+            "content": request.content},  # 외부 API가 받는 형식에 맞게 전달
+            timeout=10
+        )
+        response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+        sentiment_value = response.json().get("sentiment")
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 감정 분석 서버 연결 실패"})
     new_log = ReadingLogs(
         book_title=request.book_title,
         author=request.author,
@@ -345,9 +475,48 @@ def create_reading_log(request: ReadingLogCreate, current_user: Users = Depends(
         unknown_sentence=request.unknown_sentence,
         user_id=user_id,
         created_at=datetime.now(),
-        # sentiment=sentiment,
+        sentiment=sentiment_value,
     )
     db.add(new_log)
+    db.commit()
+    db.refresh(new_log)
+    try:
+        response = requests.post(
+            f"{api_url}/app/analyze-result",
+            json={"user_id":current_user.id,"cleaned_content":clean_contents},  # 외부 API가 받는 형식에 맞게 전달
+            timeout=10
+        )
+        response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+        new_output = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 문장 분석 서버 연결 실패"})
+    db_output = Outputs(
+        user_id=current_user.id,
+        category="reading",
+        content_id=new_log.id,
+        analysis_result=new_output["analysis_result"]
+    )
+    db.add(db_output)
+    db.commit()
+    db.refresh(db_output)
+    try:
+        response = requests.post(
+            f"{api_url}/app/analyze-text",
+            json={"book_title":request.book_title,"content": request.content,"user_id":current_user.id},  # 외부 API가 받는 형식에 맞게 전달
+            timeout=10
+        )
+        response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] 외부 API 요청 실패: {e}")
+        raise HTTPException(status_code=502, detail={"message": "외부 문장 분석 서버 연결 실패"})
+    response_data = response.json()
+    db.add(UserWordUsage(
+        user_id=current_user.id,
+        content_id=new_log.id,      # or daily_id
+        analysis_result=response_data["words_list"],
+        category="reading"          # 동일하게
+    ))
     db.commit()
     db.refresh(new_log)
     return new_log

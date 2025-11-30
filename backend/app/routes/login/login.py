@@ -52,6 +52,7 @@ def get_current_user(access_token: str = Cookie(None), db: Session = Depends(get
     try:
         payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
+        user = db.query(User).filter(User.id == user_id).first()
     except JWTError:
         return None
     except Exception:
