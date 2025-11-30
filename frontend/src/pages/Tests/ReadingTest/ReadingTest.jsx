@@ -16,11 +16,12 @@ const ReadingTest = () => {
 
     const currentQuestion = questions[currentQuestionIndex];
     const questionCount = currentQuestionIndex + 1;
-    const correctCount = questionHistory.filter(q => q.isCorrect).length;
+    const correctCount = questionHistory.filter(q => q.is_correct).length;
 
     const hasFetchedRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [hasAnswered, setHasAnswered] = useState(false); // ✅ 답변 완료 상태
+    const [isOpen, setIsOpen] = useState(false);
 
     useAuthLoad();
 
@@ -116,6 +117,76 @@ const ReadingTest = () => {
             <LoadingSpinner text="문제를 불러오는 중..." />
         );
 
+    if (finished)
+        return(
+            <div className={`text-center px-4 ${isOpen ? 'mt-5' : 'mt-20'}`}>
+                {!isOpen && (
+                    <>
+                        <h2 className="text-2xl font-bold text-green-700 mb-4">
+                            문해력 테스트 완료!
+                        </h2>
+                        <p className="text-lg text-gray-700 mb-4">
+                            총 <b>{MAX_QUESTIONS}</b>문제 중 <b>{correctCount}</b>문제 정답!
+                        </p>
+                    </>
+                )}
+
+                {/* 🔽 문제 히스토리 토글 */}
+                <div className="w-[500px] p-4 bg-gray-50 rounded-lg text-left">
+
+                    {/* 토글 헤더 */}
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="w-full flex justify-between items-center"
+                    >
+                        <h3 className="text-lg font-bold">문제 다시 보기</h3>
+                        <span className="text-xl">
+                        {isOpen ? "▲" : "▼"}
+                    </span>
+                    </button>
+
+                    {/* 토글 내용 */}
+                    <div
+                        className={`transition-all duration-300 overflow-hidden ${
+                            isOpen ? "max-h-[2000px] opacity-100 mt-4" : "max-h-0 opacity-0"
+                        }`}
+                    >
+                        {questionHistory.map((item, idx) => (
+                            <div
+                                key={idx}
+                                className={`p-2 mb-2 rounded ${
+                                    item.is_correct ? "bg-green-100" : "bg-red-100"
+                                }`}
+                            >
+                                <div className="font-semibold text-sm">
+                                    Q{idx + 1}. {item.question}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-700 mt-1">
+                                        당신의 답: <b>{item.user_answer}</b>{" "}
+                                    </div>
+                                    {!item.is_correct && (
+                                        <div className="text-sm font-bold text-red-700 mt-1 mr-3">
+                                            정답: <b>{item.correct_answer}</b>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {!isOpen && (
+                    <button
+                        onClick={handleRestart}
+                        className="mt-6 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition"
+                    >
+                        다시 시작하기
+                    </button>
+                )}
+            </div>
+        )
+
     return (
         <div style={{ maxWidth: "600px", margin: "auto", padding: "24px" }}>
             <h1>문해력 테스트</h1>
@@ -176,53 +247,7 @@ const ReadingTest = () => {
                 </>
             )}
 
-            {finished && (
-                <div style={{ marginTop: "32px", textAlign: "center" }}>
-                    <h2>🎉 테스트 완료!</h2>
-                    <p style={{ fontSize: "24px", fontWeight: "bold", margin: "16px 0" }}>
-                        {correctCount} / {MAX_QUESTIONS}
-                    </p>
-                    <p style={{ fontSize: "18px" }}>
-                        정답률: {Math.round((correctCount / MAX_QUESTIONS) * 100)}%
-                    </p>
 
-                    <div style={{ marginTop: "24px", padding: "16px", backgroundColor: "#f8f9fa", borderRadius: "8px", textAlign: "left" }}>
-                        <h3>문제 히스토리</h3>
-                        {questionHistory.map((item, idx) => (
-                            <div key={idx} style={{
-                                padding: "8px",
-                                marginBottom: "8px",
-                                backgroundColor: item.is_correct ? "#d4edda" : "#f8d7da",
-                                borderRadius: "4px",
-                                fontSize: "14px"
-                            }}>
-                                <strong>Q{idx + 1}.</strong> {item.question}
-                                <br />
-                                <span style={{ color: "#666" }}>
-                                    당신의 답: {item.user_answer || "미응답"} {item.is_correct ? " ✅" : " ❌"}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <button
-                        onClick={handleRestart}
-                        style={{
-                            marginTop: "24px",
-                            padding: "12px 24px",
-                            fontSize: "16px",
-                            fontWeight: "bold",
-                            backgroundColor: "#28a745",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                        }}
-                    >
-                        🔄 다시 시작
-                    </button>
-                </div>
-            )}
         </div>
     );
 };
