@@ -44,7 +44,7 @@ class Users(Base):
     created_at = mapped_column(DateTime, server_default=text('now()'))
     updated_at = mapped_column(DateTime, server_default=text('now()'))
     profile_img_url = mapped_column(String(255), server_default=text('NULL::character varying'))
-    key_parent = mapped_column(String(100), server_default=text('NULL::character varying'))
+    key_parent = mapped_column(String(255), server_default=text('NULL::character varying'))
 
     customer_support_posts: Mapped[List['CustomerSupportPosts']] = relationship('CustomerSupportPosts', uselist=True, back_populates='user')
     customer_support_comments: Mapped[List['CustomerSupportComments']] = relationship('CustomerSupportComments', uselist=True, back_populates='user')
@@ -124,7 +124,6 @@ class DailyWritings(Base):
         ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE', name='daily_writings_user_id_fkey'),
         PrimaryKeyConstraint('id', name='daily_writings_pkey')
     )
-
     id = mapped_column(Integer)
     mood = mapped_column(Integer, nullable=False)
     created_at = mapped_column(DateTime, nullable=False, server_default=text('now()'))
@@ -436,3 +435,7 @@ class UserWordUsage(Base):
     # 카테고리(daily / reading)
     category = mapped_column(String(10), nullable=False)
     created_at = mapped_column(Date, server_default=text('CURRENT_DATE'))
+    user: Mapped["Users"] = relationship(
+        "Users",
+        back_populates="user_word_usage"
+    )

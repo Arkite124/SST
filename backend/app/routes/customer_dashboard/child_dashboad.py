@@ -121,41 +121,30 @@ def get_reading_stats(
 # ───────────────────────────────
 # 어휘 사용 분석 (최근 1개월)
 # ───────────────────────────────
-@router.get(
-    "/word-usage",
-    summary="최근 1개월 어휘 사용량 분석 (TOP 10)",
-    description="""
-최근 1개월 동안 자녀가 사용한 단어 목록 중  
-**가장 많이 사용한 단어 10개**를 집계합니다.
-
-### 응답 예시
-```json
-{
-  "top_words": [
-    {"word": "사과", "count": 5},
-    {"word": "학교", "count": 4},
-    {"word": "친구", "count": 4}
-  ]
-}
-"""
-)
+@router.get("/word-usage")
 def get_word_usage(
     db: Session = Depends(get_db),
     current_user: Users = Depends(get_current_user)
 ):
-    word_counts = (
-        db.query(UserWordUsage.word, func.count(UserWordUsage.word))
-        .filter(
-            UserWordUsage.user_id == current_user.id,
-            UserWordUsage.created_at >= func.now() - text("interval '1 month'")
-        )
-        .group_by(UserWordUsage.word)
-        .order_by(func.count(UserWordUsage.word).desc())
-        .limit(10)
-        .all()
-    )
+    sql = text("""
+        SELECT elem->>'base_word' AS word, COUNT(*) AS count
+        FROM user_word_usage,
+             jsonb_array_elements(analysis_result) elem
+        WHERE user_id = :user_id
+          AND created_at >= now() - INTERVAL '1 month'
+        GROUP BY word
+        ORDER BY count DESC
+        LIMIT 10;
+    """)
 
-    return {"top_words": [{"word": w[0], "count": w[1]} for w in word_counts]}
+    rows = db.execute(sql, {"user_id": current_user.id}).fetchall()
+
+    return {
+        "top_words": [
+            {"word": row.word, "count": row.count}
+            for row in rows
+        ]
+    }
 
 
 # ───────────────────────────────

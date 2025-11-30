@@ -21,7 +21,7 @@ export default function DailyWritingPage() {
         setLoading(true);
         try {
             const res = await axiosInstance.get("/activities/list/daily_writing");
-            setWritings(res.data.items || []);
+            setWritings(res?.data.items);
         } catch (err) {
             console.error(err);
             if (err.response?.status === 401) {
@@ -32,18 +32,15 @@ export default function DailyWritingPage() {
             setLoading(false);
         }
     };
-
     useEffect(() => {
         fetchWritings();
     }, []);
-
     /** -----------------------------------------------------
      *  글 상세 보기
      * ----------------------------------------------------- */
     const handleCardClick = async (id) => {
         try {
             const res = await axiosInstance.get(`/activities/list/daily_writing/${id}`);
-
             openModal("글 상세보기", (
                 <DailyWritingDetailModal
                     writing={res.data}
@@ -122,8 +119,8 @@ export default function DailyWritingPage() {
     /** ----------------------------------------------------- */
     if (loading) return <LoadingSpinner />;
 
-    return (
-        <div className="space-y-6">
+    if(writings!=null) return (
+        <div className="space-y-6 z-0">
             <div className="flex justify-end">
                 <Button onClick={handleOpenAdd} label="+ 새 글 작성" />
             </div>
@@ -134,10 +131,10 @@ export default function DailyWritingPage() {
                 </p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {writings.map((writing) => (
+                    {writings?.map((writing) => (
                         <Card
                             key={writing.id}
-                            onClick={() => handleCardClick(writing.id)}
+                            onClick={() => handleCardClick(Number(writing.id))}
                         >
                             {/* 내용 표시 */}
                             <div className="mt-3">

@@ -12,16 +12,16 @@ export default function ParentLoginPage() {
         e.preventDefault();
         setError("");
         try {
-            await axiosInstance.post("/parent/login", { parent_key: parentKey }, { withCredentials: true });
+            await axiosInstance.post("/parent/login", { parent_key: parentKey });
             navigate('/parent/dashboard')
-        } catch (err) {
+        } catch {
             setError("인증 실패: 올바른 부모 키를 입력하세요.");
         }
     };
     return (
         <div className="w-full min-h-screen flex flex-col items-center justify-center bg-[#F0FDF4]">
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md w-[20rem]">
-                <h2 className="text-xl font-bold text-green-800 mb-4">👩‍👧 부모 로그인</h2>
+                <h2 className="text-xl font-bold text-green-800 mb-4">부모 로그인</h2>
                 <input
                     type="password"
                     value={parentKey}

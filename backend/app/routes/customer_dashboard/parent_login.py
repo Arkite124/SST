@@ -1,12 +1,13 @@
 from fastapi import APIRouter,HTTPException,Depends,Request,Response
 from pydantic import BaseModel
+from rsa.cli import decrypt
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from sqlalchemy import text
-from app.routes.login.login import get_current_user
+from app.routes.login.login import get_current_user, verify_password
 from data.postgresDB import SessionLocal
 from models import Users, UserGames, DailyWritings, ReadingLogs, UserTests
 import os
@@ -87,8 +88,10 @@ def parent_login(
 
     if not current_user:
         raise HTTPException(status_code=401, detail="로그인 여부를 확인해주세요.")
-    if not current_user.key_parent or not pwd_context.verify(parent_key, current_user.key_parent):
-        raise HTTPException(status_code=403, detail="Invalid parent key")
+    if not current_user.key_parent:
+        raise HTTPException(status_code=403,detail="부모 키가 존재하지 않습니다.")
+    if not verify_password(parent_key, current_user.key_parent):
+        raise HTTPException(status_code=403, detail=f"부모 키가 틀렸습니다.")
 
     token = create_access_token({"sub": str(user_id), "parent": True})
 

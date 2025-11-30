@@ -35,9 +35,6 @@ def create_access_token(data: dict, expires_delta: int = ACCESS_TOKEN_EXPIRE_MIN
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-class ParentKeyInput(BaseModel):
-    parent_key: str
-
 # JWT 검증 함수
 def verify_token(token: str):
     try:
@@ -67,7 +64,8 @@ class ParentLoginSchema(BaseModel):
 ```json
 {
   "parent_key": "1234abcd"
-}           ```
+}           
+```
 Response 예시
 ```json
 {
@@ -88,8 +86,10 @@ def parent_login(
 
     if not current_user:
         raise HTTPException(status_code=401, detail="로그인 여부를 확인해주세요.")
-    if not current_user.key_parent or not pwd_context.verify(parent_key, current_user.key_parent):
-        raise HTTPException(status_code=403, detail="Invalid parent key")
+    if not current_user.key_parent:
+        raise HTTPException(status_code=403,detail="부모 키가 존재하지 않습니다.")
+    if not pwd_context.verify(parent_key, current_user.key_parent):
+        raise HTTPException(status_code=403, detail=f"부모 키가 틀렸습니다. 입력 받은 부모키: {parent_key}")
 
     token = create_access_token({"sub": str(user_id), "parent": True})
 

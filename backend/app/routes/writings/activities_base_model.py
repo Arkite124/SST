@@ -18,9 +18,11 @@ class ActivityItem(BaseModel):
         from_attributes = True
 
 class DailyWritingBase(BaseModel):
+    id: Optional[int] = None
     title: str
     content: str
     mood:int
+    words_list: Optional[List[dict]] = None
     created_at: Optional[datetime] = Field(default_factory=datetime.now)  # 없을시 현재 시각 자동 입력
     attachment_url: Optional[str] = None
     cleaned_content: Optional[str] = None
@@ -34,6 +36,7 @@ class DailyWritingCreate(BaseModel):
     cleaned_content: Optional[str] = None
 
 class DailyWritingUpdate(BaseModel):
+    id: Optional[int] = None
     title: Optional[str] = None
     content: Optional[str] = None
 
@@ -92,6 +95,7 @@ class ReadingLogWithBook(BaseModel):
     cleaned_content: Optional[str] = None  # nullable=True
     sentiment: Optional[str] = None        # nullable=True
     unknown_sentence: Optional[str] = None # nullable=True
+    words_list: Optional[List[dict]] = None# nullable=True, 단어 리스트들
     # 네이버 API 데이터
     image: Optional[str] = None
     link: Optional[str] = None

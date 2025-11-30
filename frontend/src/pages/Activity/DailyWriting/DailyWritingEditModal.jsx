@@ -27,7 +27,7 @@ export default function DailyWritingEditModal({ writing, onSubmit }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 flex z-1 items-center justify-center">
             {/* 백드롭 */}
             <div
                 className="absolute inset-0 bg-black bg-opacity-50"
@@ -37,7 +37,7 @@ export default function DailyWritingEditModal({ writing, onSubmit }) {
             {/* 모달 컨텐츠 */}
             <form
                 onSubmit={handleSubmit}
-                className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-6"
+                className="relative bg-white rounded-2xl z-2 shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto p-6 z-[10000] space-y-6"
             >
                 {/* 제목 */}
                 <div>

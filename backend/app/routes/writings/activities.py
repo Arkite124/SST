@@ -223,12 +223,35 @@ def daily_list(
 )
 def daily_detail(list_id: int, current_user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     if not current_user:
-        raise HTTPException(status_code=401, detail={"message":"로그인이 필요합니다."})
-    user_id = current_user.id
-    writing = db.query(DailyWriting).filter(DailyWriting.id == list_id, DailyWriting.user_id == user_id).first()
+        raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
+
+    writing = (
+        db.query(DailyWriting)
+        .filter(DailyWriting.id == list_id, DailyWriting.user_id == current_user.id)
+        .first()
+    )
     if not writing:
         raise HTTPException(404, "내역이 없거나 잘못된 접근입니다.")
-    return writing
+
+    # UserWordUsage 조회
+    word_usage = (
+        db.query(UserWordUsage)
+        .filter(
+            UserWordUsage.user_id == current_user.id,
+            UserWordUsage.category == "daily",
+            UserWordUsage.content_id == list_id
+        )
+        .first()
+    )
+
+    # 분석 결과가 있다면 words_list 추가
+    words_list = word_usage.analysis_result if word_usage else []
+
+    #  데이터를 반환할 때 words_list 직접 추가
+    return {
+        **writing.__dict__,
+        "words_list": words_list
+    }
 
 @router.post(
     "/list/daily_writing",
@@ -380,15 +403,26 @@ def daily_patch(list_id: int, request: DailyWritingUpdate, current_user: Users =
     writing = db.query(DailyWriting).filter(DailyWriting.id == list_id, DailyWriting.user_id == user_id).first()
     if not writing:
         raise HTTPException(404, "해당 일기는 존재하지 않습니다.")
-    if writing.id != request.id:
+    if writing.id != list_id:
         raise HTTPException(status_code=401, detail={"message": "잘못된 요청입니다."})
     if request.content in (" ", "\n", None):
         raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
-    if request.content == writing.content:
-        raise HTTPException(status_code=400, detail={"message": "수정된 내용이 없습니다!"})
     if writing.content != request.content:
-        writing.content = request.content
-        writing.cleaned_content = safe_spell_check(request.content)
+        # ------------------------
+        # content 수정될 경우 clean-content 호출
+        # ------------------------
+        try:
+            response = requests.post(
+                f"{api_url}/app/clean-content",
+                json={"content": request.content},
+                timeout=10
+            )
+            response.raise_for_status()
+            clean_contents = response.json().get("cleaned_content", request.content)
+            writing.cleaned_content = clean_contents
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] 외부 API 요청 실패: {e}")
+            raise HTTPException(status_code=502, detail={"message": "외부 텍스트 분석 서버 연결 실패"})
     db.commit()
     db.refresh(writing)
     return writing
@@ -517,7 +551,16 @@ def get_reading_log(
         raise HTTPException(status_code=404, detail="해당 독후감이 존재하지 않습니다.")
     # ✅ 네이버 책 정보 가져오기 (목록과 동일한 방식)
     book_info = fetch_book_from_naver(log.book_title)
-
+    word_usage = (
+        db.query(UserWordUsage)
+        .filter(
+            UserWordUsage.user_id == current_user.id,
+            UserWordUsage.category == "reading",
+            UserWordUsage.content_id == log_id
+        )
+        .first()
+    )
+    words_list = word_usage.analysis_result if word_usage else []
     return ReadingLogWithBook(
         id=log.id,
         book_title=log.book_title,
@@ -527,6 +570,7 @@ def get_reading_log(
         content=log.content,
         cleaned_content=log.cleaned_content,
         unknown_sentence=log.unknown_sentence,
+        words_list=words_list,
         image=book_info.get("image") if book_info else None,
         link=book_info.get("link") if book_info else None,
         description=book_info.get("description") if book_info else None,
