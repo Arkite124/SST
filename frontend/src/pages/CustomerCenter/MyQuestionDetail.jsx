@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import LoadingSpinner from "@/components/common/LoadingSpinner.jsx";
 import { useModal } from "@/contexts/ModalContext.jsx";
-
 import {
     fetchSupportPostDetail,
     createSupportComment,
@@ -19,26 +18,27 @@ import useCheckUser from "@/hooks/useCheckUser.jsx";
 // 🔹 댓글 입력 컴포넌트 — Redux 버전
 // -------------------------------------------------------
 function CommentInput({ postId, replyId = null, onSuccess }) {
-    useCheckUser();
     const dispatch = useDispatch();
     const { alert } = useModal();
-    const { commentContent, loading } = useSelector(
-        (state) => state.support
-    );
+    const { loading } = useSelector((state) => state.support);
+
+    const [localContent, setLocalContent] = useState("");
+
     const handleSubmit = async () => {
-        if (!commentContent.trim()) return;
+        if (!localContent.trim()) return;
 
         try {
             await dispatch(
                 createSupportComment({
                     post_id: postId,
                     reply_id: replyId,
-                    content: commentContent,
+                    content: localContent,
                 })
             ).unwrap();
-
-            dispatch(resetCommentForm());
-            if (onSuccess) onSuccess(); // detail 다시 로딩
+            setLocalContent("");   // ← 로컬값 초기화
+            setCommentContent("")
+            resetCommentForm();
+            if (onSuccess) onSuccess();
         } catch (err) {
             alert("오류", err?.detail || "댓글 작성 실패");
         }
@@ -46,13 +46,14 @@ function CommentInput({ postId, replyId = null, onSuccess }) {
 
     return (
         <div className="mt-2">
-      <textarea
-          value={commentContent}
-          onChange={(e) => dispatch(setCommentContent(e.target.value))}
-          className="w-full border rounded p-2 text-sm h-24 resize-none"
-          placeholder={replyId ? "답글을 입력하세요..." : "답변을 입력하세요..."}
-          rows={replyId ? 2 : 3}
-      />
+            <textarea
+                value={localContent}
+                onChange={(e) => setLocalContent(e.target.value)}
+                className="w-full border rounded p-2 text-sm h-24 resize-none"
+                placeholder={replyId ? "답글을 입력하세요..." : "답변을 입력하세요..."}
+                rows={replyId ? 2 : 3}
+            />
+
             <button
                 onClick={handleSubmit}
                 disabled={loading}
@@ -63,18 +64,13 @@ function CommentInput({ postId, replyId = null, onSuccess }) {
         </div>
     );
 }
-
-
-
 // -------------------------------------------------------
 // 🔹 댓글 단일 아이템 — 재귀 구조 그대로 유지
 // -------------------------------------------------------
 function CommentItem({ comment, postId, refresh, user, status }) {
     const [showReply, setShowReply] = useState(false);
-
     const canReply =
         status === "resolved" || status === "closed" || user?.role === "admin";
-
     return (
         <div className="border-b py-2 pl-2">
             {/* 작성자 */}
@@ -89,7 +85,7 @@ function CommentItem({ comment, postId, refresh, user, status }) {
             <div className="text-sm mt-1">{comment.content}</div>
 
             {/* 답글 기능 */}
-            {canReply && (
+            {canReply && comment.reply_id === null && (
                 <button
                     onClick={() => setShowReply(!showReply)}
                     className="text-xs text-blue-500 mt-1"
@@ -136,7 +132,7 @@ const MyQuestionDetail = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { alert } = useModal();
-
+    useCheckUser();
     const { user } = useSelector((state) => state.auth);
     const { postDetail, loading, error } = useSelector(
         (state) => state.support
@@ -208,7 +204,7 @@ const MyQuestionDetail = () => {
                 )
             )}
 
-            {/* 댓글 목록 */}
+            {/*/!* 댓글 목록 *!/*/}
             <div className="mt-4">
                 {data.comments.length === 0 ? (
                     <p className="text-sm text-green-500 font-juache">답글이 없습니다.</p>

@@ -398,6 +398,7 @@ async def get_post(
             "user_id": comment.user_id,
             "content": comment.content,
             "created_at": comment.created_at,
+            "reply_id": comment.reply_id,
             "user": {
                 "id": comment.user.id,
                 "nickname": comment.user.nickname,

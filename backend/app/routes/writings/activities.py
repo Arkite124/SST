@@ -1,9 +1,7 @@
 import os
 from typing import List
-
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from numba.core.types import unknown
 from sqlalchemy.orm import Session
 from sqlalchemy import select, literal
 from sqlalchemy.sql import union_all
@@ -12,13 +10,10 @@ from app.routes.login.login import get_current_user
 from app.routes.writings.activities_base_model import *
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from Ai.ai_common.clean_contents import safe_spell_check
 import requests
 from fastapi import Query
 from sqlalchemy import func
 from datetime import datetime, date, timedelta
-
-from backend.app.routes.writings.activities_base_model import ActivityItem, DailyWritingRead
 
 load_dotenv()
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")

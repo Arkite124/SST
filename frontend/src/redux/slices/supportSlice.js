@@ -164,6 +164,7 @@ const initialState = {
     category: "",
     title: "",
     content: "",
+    replyId: null,   // null이면 부모 댓글, 값 있으면 대댓글
     faq: {
         items: [],
         total: 0,
@@ -190,7 +191,6 @@ const initialState = {
 
     // 댓글 작성
     commentContent: "",
-    replyId: null,   // null이면 부모 댓글, 값 있으면 대댓글
 };
 
 export const supportSlice = createSlice({

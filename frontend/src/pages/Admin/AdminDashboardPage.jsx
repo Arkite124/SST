@@ -22,9 +22,9 @@ export default function AdminDashboardPage() {
 
     return (
         <div className="flex flex-col items-center w-full p-1">
-            <div className="flex gap-2 mb-12 border-b border-[#B4E197] pb-2">
+            <div className="flex gap-2 mb-1 border-b border-[#B4E197]">
                 {!loading && user.role === "admin" && (
-                    <nav className="flex gap-4 border-b border-[#B4E197] mb-6">
+                    <nav className="flex gap-4 border-b border-[#B4E197] mb-1">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.path}
