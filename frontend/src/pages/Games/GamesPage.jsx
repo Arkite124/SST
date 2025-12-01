@@ -2,13 +2,16 @@ import {useNavigate, Outlet, useLocation} from "react-router-dom";
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import bgImg from "@/assets/bgImg.png";
 import book from "@/assets/game.png"
+import spell from "@/assets/game_word_spell.png";
+import chain from "@/assets/game_word_chain.png";
+import puzzle from "@/assets/game_sentence_puzzle.png";
 import useCheckUser from "@/hooks/useCheckUser.jsx";
 
 export default function GamesPage() {
     const tabs = [
-        { name: "끝말잇기", path: "word-chain" },
-        { name: "초성퀴즈", path: "word-meaning" },
-        { name: "문장퍼즐", path: "sentence-complete" },
+        { name: "끝말잇기", path: "word-chain", image: chain },
+        { name: "초성퀴즈", path: "word-meaning", image: spell },
+        { name: "문장퍼즐", path: "sentence-complete", image: puzzle },
     ];
     const handleClick = (tab) => {
         navigate(`/games/${tab.path}`);
@@ -57,6 +60,10 @@ export default function GamesPage() {
                                     src={book}
                                     alt="book"
                                     className="relative left-[20%] top-[70%] w-[200px] mt-10 float-animation"
+                                />
+                                <img
+                                    src={tab.image}
+                                    className="absolute w-[250px] ml-6 bottom-[30%] rounded-2xl"
                                 />
                                 <button
                                     onClick={() => handleClick(tab)}

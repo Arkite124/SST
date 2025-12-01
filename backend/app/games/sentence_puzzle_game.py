@@ -224,7 +224,7 @@ class SentencePuzzleGame:
                 'passed': False,
                 'similarity': 0.0,
                 'exact_match': False,
-                'message': f"문장의 끝맺음이 다릅니다. 마지막 단어들의 순서를 확인해보세요. (시도: {puzzle_info['attempts']}/{puzzle_info['max_attempts']})",
+                'message': f"문장의 끝맺음이 다릅니다. 마지막 단어들의 순서를 확인해보세요. ({puzzle_info['attempts']}/{puzzle_info['max_attempts']})",
                 'user_sentence': user_answer,
                 'original_sentence': original_sentence if puzzle_info['attempts'] >= 2 else None
             }

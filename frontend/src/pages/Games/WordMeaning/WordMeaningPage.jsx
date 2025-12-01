@@ -8,6 +8,10 @@ import MessageDisplay from '@/components/common/Message';
 import GameButton from '@/components/common/GameButton';
 import useAuthLoad from "@/hooks/useAuthLoad.jsx";
 import useCheckUser from "@/hooks/useCheckUser.jsx";
+import Bookmark from "@/components/common/Bookmark.jsx";
+import {GAME_TABS} from "@/utils/tabs.js";
+import grass from "@/assets/pattern1.png";
+
 const WordMeaningPage = () => {
     const navigate = useNavigate();
     const { state, actions } = useSpellGame();
@@ -17,23 +21,31 @@ const WordMeaningPage = () => {
         actions.submit(answer);
         setAnswer('');
     };
+    const gameTabs = GAME_TABS;
     useAuthLoad()
     useCheckUser();
     return (
-        <div className="z-20 min-h-[70%] bg-gradient-to-br from-purple-50 to-pink-50 py-8">
-            <div className="container mx-auto px-4 max-w-2xl">
-                <div className="bg-white rounded-2xl shadow-xl p-2">
+        <div className="relative z-20 w-[80%] max-w-[1000px] min-h-[80%] rounded-2xl
+            bg-gradient-to-br from-[#cff09e]/80 to-[#f1ffe0]/80 overflow-visible
+            flex items-center justify-center p-4">
+            <div className="w-full max-w-4xl h-full flex flex-col">
+                <div className="flex justify-between items-center mb-2">
                     <GameButton
                         onClick={() => navigate('/games')}
-                        variant="secondary"
-                        className="text-sm"
+                        className="bg-[#3d5919] text-white"
                     >
                         ← 목록으로
                     </GameButton>
-
-                    <h1 className="text-4xl font-bold text-center mb-8 text-purple-600">
-                        🎯 초성 퀴즈
+                    <h1 className="font-juache text-3xl font-normal text-[#3d5919]">
+                        초성 퀴즈
                     </h1>
+                    <div className="w-20"></div>
+                </div>
+                <div className="flex-1 bg-white rounded-2xl shadow-xl overflow-visible
+                    flex flex-col relative z-20">
+                    <div className="absolute top-1/2 -translate-y-1/2 right-[62px] translate-x-full z-10">
+                        <Bookmark tabs={gameTabs} type="game" />
+                    </div>
 
                     {/* 메시지 */}
                     {state.message && (
@@ -63,7 +75,6 @@ const WordMeaningPage = () => {
                             score={state.score}
                         />
                     )}
-
                     {/* 게임 결과 화면 */}
                     {state.gameOver && (
                         <GameResult
@@ -73,6 +84,18 @@ const WordMeaningPage = () => {
                             onGoHome={actions.goHome}
                         />
                     )}
+                    {/* 하단 가이드 */}
+                    <div className="p-3">
+                        <img
+                            src={grass}
+                            alt="grass"
+                            className="w-full h-auto rounded-lg shadow-lg"
+                        />
+                    </div>
+                </div>
+                {/* 하단 정보 */}
+                <div className="text-center text-xs text-gray-500 mt-2">
+                    사전 데이터 제공: 국립국어원 한국어기초사전
                 </div>
             </div>
         </div>
