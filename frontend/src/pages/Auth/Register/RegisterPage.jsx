@@ -7,7 +7,7 @@ import {
     CheckPwCorrect,
     CheckUserNickname,
 } from "@/pages/Auth/Register/RegisterUtil/RegisterUtil.js";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function RegisterPage() {
     const { alert } = useModal();  // ⭐ alert modal 사용

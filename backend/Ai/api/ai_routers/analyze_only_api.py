@@ -35,5 +35,4 @@ def analyze_only(request: AnalyzeRequest):
             "counter_verbs": analysis["counter_verbs"],
             "counter_adjectives": analysis["counter_adjectives"]
         },
-
     }

@@ -78,6 +78,7 @@ app.include_router(customer_support)
 app.include_router(edit_user, prefix="/users", tags=["user"])
 app.include_router(parent)
 app.include_router(readings, prefix="/communities/student", tags=["community_reading"])
+
 app.include_router(check_duplicate)
 app.include_router(find_user, prefix="/find_user", tags=["find_user"])
 app.include_router(activities)
@@ -153,6 +154,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # 실행 진입점
 # ---------------------------------------------------
 if __name__ == "__main__":
+    print(app.routes)
     # Docker 내부에서는 실행하지 않음
     if os.getenv("RUN_ENV") == "docker":
         print("Docker 환경에서는 nginx가 통제한다.")

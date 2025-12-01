@@ -1,4 +1,6 @@
 import os
+from contextlib import contextmanager
+
 from dotenv import load_dotenv
 load_dotenv()  # ..env 파일 자동 로드
 
@@ -11,3 +13,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")  # 환경변수로 관리 추천
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+@contextmanager
+def get_session():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

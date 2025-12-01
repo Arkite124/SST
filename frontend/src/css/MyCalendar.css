@@ -1,0 +1,42 @@
+.react-calendar {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-family: 'Inter', sans-serif;
+}
+
+/* 상단 년월 글자 크기 줄이기 */
+.react-calendar__navigation__label__labelText--from {
+    font-size: 18px; /* 기존보다 조금 작게 (14px) */
+    font-weight: 700;    /* 필요에 따라 조정 */
+}
+
+/* 좌우 화살표 크기도 조절 가능 */
+.react-calendar__navigation button:enabled:hover {
+    background-color: #e0e7ff; /* hover 색상 */
+    border-radius: 0.5rem;
+}
+
+.react-calendar__tile {
+    background: #f9fafb;
+    color: #333;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.react-calendar__tile--active {
+    background: #4f46e5; /* 보라색 */
+    color: white;
+    border-radius: 0.5rem;
+}
+
+.react-calendar__tile:hover {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.react-calendar__tile--now {
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 0.5rem;
+}

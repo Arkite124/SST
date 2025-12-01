@@ -12,12 +12,13 @@ from app.routes.login.login import get_current_user
 from app.routes.writings.activities_base_model import *
 from data.postgresDB import SessionLocal
 from dotenv import load_dotenv
-from datetime import datetime
 from Ai.ai_common.clean_contents import safe_spell_check
 import requests
+from fastapi import Query
+from sqlalchemy import func
+from datetime import datetime, date, timedelta
 
-from app.routes.writings.activities_base_model import DailyWritingListResponse, ReadingLogWithBook, \
-    ReadingLogUpdate
+from backend.app.routes.writings.activities_base_model import ActivityItem, DailyWritingRead
 
 load_dotenv()
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
@@ -97,7 +98,7 @@ def get_all_activities(
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    size: int = Query(5, ge=1, le=20),
+    size: int = Query(6, ge=1, le=20),
 ):
     if not current_user:
         raise HTTPException(401, "잘못된 접근입니다.")
@@ -192,22 +193,24 @@ def daily_list(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     size: int = Query(5, ge=1, le=20),
+    selected_date: str | None = Query(None, description="YYYY-MM-DD 형식의 필터링 날짜")
 ):
     if not current_user:
         raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
 
-    user_id = current_user.id
+    user_id = int(current_user.id)
     offset = get_offset(page, size)
 
-    total = db.query(DailyWriting).filter(DailyWriting.user_id == user_id).count()
-    items = (
-        db.query(DailyWriting)
-        .filter(DailyWriting.user_id == user_id)
-        .order_by(DailyWriting.created_at.desc())
-        .offset(offset)
-        .limit(size)
-        .all()
-    )
+    query = db.query(DailyWriting).filter(DailyWriting.user_id == user_id)
+
+    # 날짜 필터링 (시간 무시, 날짜만 비교)
+    if selected_date:
+        query = query.filter(
+            func.date(DailyWriting.created_at)
+            == func.to_date(selected_date, "YYYY-MM-DD")
+        )
+    total = query.count()
+    items = query.order_by(DailyWriting.created_at.desc()).offset(offset).limit(size).all()
 
     return {"total": total, "page": page, "size": size, "items": items}
 
@@ -398,31 +401,52 @@ def daily_create(
 )
 def daily_patch(list_id: int, request: DailyWritingUpdate, current_user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     if not current_user:
-        raise HTTPException(status_code=401, detail={"message":"로그인이 필요합니다."})
+        raise HTTPException(status_code=401, detail={"message": "로그인이 필요합니다."})
+
     user_id = current_user.id
-    writing = db.query(DailyWriting).filter(DailyWriting.id == list_id, DailyWriting.user_id == user_id).first()
+    writing = db.query(DailyWriting).filter(
+        DailyWriting.id == list_id,
+        DailyWriting.user_id == user_id
+    ).first()
+
     if not writing:
         raise HTTPException(404, "해당 일기는 존재하지 않습니다.")
-    if writing.id != list_id:
-        raise HTTPException(status_code=401, detail={"message": "잘못된 요청입니다."})
-    if request.content in (" ", "\n", None):
-        raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
-    if writing.content != request.content:
-        # ------------------------
-        # content 수정될 경우 clean-content 호출
-        # ------------------------
-        try:
-            response = requests.post(
-                f"{api_url}/app/clean-content",
-                json={"content": request.content},
-                timeout=10
-            )
-            response.raise_for_status()
-            clean_contents = response.json().get("cleaned_content", request.content)
-            writing.cleaned_content = clean_contents
-        except requests.exceptions.RequestException as e:
-            print(f"[ERROR] 외부 API 요청 실패: {e}")
-            raise HTTPException(status_code=502, detail={"message": "외부 텍스트 분석 서버 연결 실패"})
+
+    # ✅ 각 필드를 선택적으로 업데이트
+    updated = False
+
+    if request.title is not None:
+        writing.title = request.title
+        updated = True
+
+    if request.content is not None:
+        if not request.content or request.content.strip() in ("", " ", "\n"):
+            raise HTTPException(status_code=400, detail={"message": "내용을 입력해 주세요."})
+        if writing.content != request.content:
+            # ------------------------
+            # content 수정될 경우 clean-content 호출
+            # ------------------------
+            try:
+                response = requests.post(
+                    f"{api_url}/app/clean-content",
+                    json={"content": request.content},
+                    timeout=10
+                )
+                response.raise_for_status()
+                clean_contents = response.json().get("cleaned_content", request.content)
+                writing.cleaned_content = clean_contents
+            except requests.exceptions.RequestException as e:
+                print(f"[ERROR] 외부 API 요청 실패: {e}")
+                raise HTTPException(status_code=502, detail={"message": "외부 텍스트 분석 서버 연결 실패"})
+        updated = True
+
+    if request.mood is not None:
+        writing.mood = request.mood
+        updated = True
+
+    if not updated:
+        raise HTTPException(status_code=400, detail={"message": "수정할 내용이 없습니다."})
+
     db.commit()
     db.refresh(writing)
     return writing
@@ -693,7 +717,7 @@ def create_reading_log(request: ReadingLogCreate, current_user: Users = Depends(
         raise HTTPException(status_code=502, detail={"message": "외부 문장 분석 서버 연결 실패"})
     response_data = response.json()
     db.add(UserWordUsage(
-        user_id=user_id,
+        user_id=current_user.id,
         content_id=new_log.id,      # or daily_id
         analysis_result=response_data["words_list"],
         category="reading"          # 동일하게
@@ -728,9 +752,11 @@ def update_reading_log(
     if not log:
         raise HTTPException(status_code=404, detail="해당 독후감이 존재하지 않습니다.")
     cleaned_contents = log.cleaned_content
-    # ✅ 요청 데이터 검증
-    if request.content == log.content or request.content==" ":
-        raise HTTPException(status_code=400, detail="수정된 내용이 없습니다!")
+    # 요청 데이터 검증
+    # if not request.content or not request.content.strip():
+    #     raise HTTPException(status_code=400, detail="내용을 입력해 주세요.")
+    # if request.content == log.content:
+    #     raise HTTPException(status_code=400, detail="수정된 내용이 없습니다!")
     if request.content and request.content != log.content:
         # ------------------------
         # content 수정될 경우 clean-content 호출

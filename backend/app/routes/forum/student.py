@@ -75,6 +75,7 @@ class ReadingForumCommentRead(BaseModel):
     updated_at: datetime
     user: UserNickname
     has_replies: bool = False
+    reply_count: int = 0 # 댓글개수 카운트 시 필요
 
     class Config:
         from_attributes = True
@@ -557,9 +558,11 @@ db: Session = Depends(get_db)
 
     items = []
     for c in comments:
-        has_replies = db.query(ReadingForumComments).filter(
+        reply_count = db.query(ReadingForumComments).filter(
             ReadingForumComments.reply_id == c.id
-        ).count() > 0
+        ).count()
+
+        has_replies = reply_count > 0
 
         items.append(
             ReadingForumCommentRead(
@@ -570,7 +573,8 @@ db: Session = Depends(get_db)
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 user=c.user,
-                has_replies=has_replies
+                has_replies=reply_count > 0,
+                reply_count=reply_count
             )
         )
     return CommentListResponse(
@@ -685,27 +689,31 @@ request: ReadingForumCommentCreate,
 user: Users = Depends(get_current_user),
 db: Session = Depends(get_db),
 ):
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="로그인이 필요합니다."
+        )
     # 게시글 존재 여부 확인
     post = db.query(ReadingForumPosts).filter(ReadingForumPosts.id == request.post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
-    parent_comment = None
-    # reply_id가 있으면 → 대댓글 시도
+        # reply_id가 있을 때만 부모 댓글 확인
     if request.reply_id is not None:
         parent_comment = (
-        db.query(ReadingForumComments)
-        .filter(ReadingForumComments.id == request.reply_id)
-        .first()
+            db.query(ReadingForumComments)
+            .filter(ReadingForumComments.id == request.reply_id)
+            .first()
         )
-    if not parent_comment:
-        raise HTTPException(status_code=404, detail="부모 댓글이 존재하지 않습니다.")
+        if not parent_comment:
+            raise HTTPException(status_code=404, detail="부모 댓글이 존재하지 않습니다.")
 
-    #  부모 댓글이 이미 대댓글(reply_id != None) → 3 depth 시도 → 차단
-    if parent_comment.reply_id is not None:
-          raise HTTPException(
-              status_code=400,
-              detail="대댓글에는 대댓글을 작성할 수 없습니다.",
-          )
+        # 부모 댓글이 이미 대댓글(reply_id != None) → 3 depth 시도 → 차단
+        if parent_comment.reply_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail="대댓글에는 대댓글을 작성할 수 없습니다.",
+            )
     new_comment = ReadingForumComments(
         post_id=request.post_id,
         reply_id=request.reply_id,

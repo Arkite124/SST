@@ -26,6 +26,7 @@ import parentReducer from "./slices/parentSlice.js";
 import userBanReducer from "./slices/userBanSlice.js";
 import supportReducer from "./slices/supportSlice.js";
 import supportAdminReducer from "./slices/supportAdminSlice.js";
+import dailyWritingReducer from "./slices/dailyWritingSlice.js";
 // ✅ rootReducer
 const rootReducer = combineReducers({
     chain: chainReducer,   // 끝말잇기
@@ -38,6 +39,7 @@ const rootReducer = combineReducers({
     parent:parentReducer,
     userBans:userBanReducer,
     comment: commentReducer, // 댓글
+    dailyWriting: dailyWritingReducer,
     support: supportReducer, // 고객센터
     supportAdmin:supportAdminReducer //관리자 고객센터
 });
@@ -46,7 +48,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ["auth"],
+    whitelist: ["auth", "dailyWriting"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

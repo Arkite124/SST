@@ -5,7 +5,7 @@ import {
     CheckPhone,
     CheckUserNickname,
 } from "@/pages/Auth/Register/RegisterUtil/RegisterUtil.js";
-import { useModal } from "@/contexts/ModalContext";
+import { useModal } from "@/contexts/ModalContext.jsx";
 
 export default function Social() {
     const { alert, confirm } = useModal();

@@ -435,6 +435,7 @@ class UserWordUsage(Base):
     # 카테고리(daily / reading)
     category = mapped_column(String(10), nullable=False)
     created_at = mapped_column(Date, server_default=text('CURRENT_DATE'))
+
     user: Mapped["Users"] = relationship(
         "Users",
         back_populates="user_word_usage"
