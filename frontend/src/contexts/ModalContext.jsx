@@ -9,13 +9,14 @@ export function ModalProvider({ children }) {
     const [modalTitle, setModalTitle] = useState("");
     const [modalContent, setModalContent] = useState(null);
     const [modalType, setModalType] = useState("custom"); // alert | confirm | custom
-
+    const [loadingMessage, setLoadingMessage] = useState(null);
     const [confirmResolve, setConfirmResolve] = useState(null);
 
     const closeModal = () => {
         setIsOpen(false);
         setModalTitle("");
         setModalContent(null);
+        setLoadingMessage(null);
 
         if (confirmResolve) {
             confirmResolve(false);
@@ -53,6 +54,18 @@ export function ModalProvider({ children }) {
         setIsOpen(true);
     };
 
+    const showLoadingModal = (message = "로딩 중...") => {
+        setLoadingMessage(message);
+        setModalType("loading");
+        setIsOpen(true);
+    };
+
+    const hideLoadingModal = () => {
+        setLoadingMessage(null);
+        setModalType("custom");
+        setIsOpen(false);
+    };
+
     /** ENTER Key Support */
     useEffect(() => {
         if (!isOpen) return;
@@ -78,7 +91,7 @@ export function ModalProvider({ children }) {
     };
 
     return (
-        <ModalContext.Provider value={{ alert, confirm, openModal, closeModal }}>
+        <ModalContext.Provider value={{ alert, confirm, openModal, closeModal, showLoadingModal, hideLoadingModal  }}>
             {children}
 
             <Dialog open={isOpen} onClose={closeModal} className="z-50">
@@ -142,6 +155,17 @@ export function ModalProvider({ children }) {
                                 </button>
                             </div>
                         )}
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+            <Dialog open={modalType === "loading"} onClose={() => {}} className="relative z-[10000]">
+                <div className="fixed inset-0 bg-black/40" />
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="bg-white rounded-lg shadow-xl p-6">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500" />
+                            <p>{loadingMessage}</p>
+                        </div>
                     </Dialog.Panel>
                 </div>
             </Dialog>

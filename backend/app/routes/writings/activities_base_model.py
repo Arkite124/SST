@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------
-# ✅ Pydantic Schemas
+#   Pydantic Schemas
 # ---------------------------
 #전체 리스트를 가져오기 위한 BaseModel
 class ActivityItem(BaseModel):
@@ -45,6 +45,11 @@ class DailyWritingUpdate(BaseModel):
 class DailyWritingRead(DailyWritingBase):
     id: int
 
+    repeat_desc: Optional[str] = None
+    top_noun: Optional[str] = None
+    top_verb: Optional[str] = None
+    top_adjective: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -64,9 +69,9 @@ class ReadingLogBase(BaseModel):
     cleaned_content: Optional[str] = None  # nullable=True
     sentiment: Optional[str] = None        # nullable=True
     unknown_sentence: Optional[str] = None # nullable=True
-    image: Optional[str] = None        # ✅ Optional
-    link: Optional[str] = None         # ✅ Optional
-    description: Optional[str] = None  # ✅ Optional
+    image: Optional[str] = None        #   Optional
+    link: Optional[str] = None         #   Optional
+    description: Optional[str] = None  #   Optional
 
 class ReadingLogCreate(ReadingLogBase):
     pass

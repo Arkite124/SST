@@ -4,7 +4,6 @@ import Card from "@/components/common/Card";
 import DailyWritingModal from "./DailyWritingModal";
 import DailyWritingEditModal from "./DailyWritingEditModal";
 import DailyWritingDetailModal from "./DailyWritingDetailModal";
-import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useModal } from "@/contexts/ModalContext.jsx";
@@ -21,7 +20,7 @@ import {
     setPage,
 } from "@/redux/slices/dailyWritingSlice";
 
-// 날짜 형식을 YYYY-MM-DD 로 맞추기 (UTC 문제 해결)
+// 날짜 형식을 YYYY-MM-DD로 맞추기 (UTC 문제 해결)
 const formatDate = (date) => {
     const offset = date.getTimezoneOffset();
     const fixed = new Date(date.getTime() - offset * 60000);
@@ -31,7 +30,7 @@ const formatDate = (date) => {
 export default function DailyWritingPage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { openModal, confirm } = useModal();
+    const { openModal, closeModal, confirm, showLoadingModal, hideLoadingModal } = useModal();
 
     const { items: writings = [], loading, error, total, page, size } = useSelector(
         (state) => state.dailyWriting
@@ -61,25 +60,68 @@ export default function DailyWritingPage() {
     // Handlers
     // ------------------------------------------------
 
-    // 새 글 작성 버튼
-    const handleOpenAdd = () => {
-        openModal("새 글 작성", <DailyWritingModal onSubmit={handleAdd} />);
-    };
-
-    // 글 추가
+    // 글 추가 + 분석 상태 체크
     const handleAdd = async (data) => {
         try {
-            await dispatch(addDailyWriting(data)).unwrap();
-            toast.success("글이 등록되었습니다.");
+            // 1️⃣ 먼저 글 작성 모달 닫기
+            closeModal();
 
+            // 2️⃣ 글 등록
+            const result = await dispatch(addDailyWriting(data)).unwrap();
+
+            // 3️⃣ 로딩 모달 표시
+            showLoadingModal("글 등록 완료, 분석 진행 중...");
+
+            // 렌더링 보장
+            await new Promise((resolve) => setTimeout(resolve, 50));
+
+            // 분석 상태 폴링 (최대 60초)
+            await new Promise((resolve) => {
+                let elapsedTime = 0;
+                const interval = setInterval(async () => {
+                    elapsedTime += 2000;
+
+                    // 타임아웃 (60초)
+                    if (elapsedTime >= 60000) {
+                        clearInterval(interval);
+                        resolve();
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/activities/list/daily_writing/${result.id}/status`);
+                        const json = await res.json();
+
+                        if (json.status === "done") {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    } catch (err) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 2000);
+            });
+
+            // 4️⃣ 완료되면 로딩 모달 닫기
+            hideLoadingModal();
+
+            // 약간의 딜레이 후 토스트 표시 (모달이 완전히 사라진 후)
+            await new Promise((resolve) => setTimeout(resolve, 100));
+
+            toast.success("분석 완료!");
             dispatch(setPage(1));
-
             const dateParam = selectedDate ? formatDate(selectedDate) : null;
-
             dispatch(fetchDailyWritings({ page: 1, size, selectedDate: dateParam }));
-        } catch {
+
+        } catch (err) {
+            hideLoadingModal();
             toast.error("등록에 실패했습니다.");
         }
+    };
+
+    const handleOpenAdd = () => {
+        openModal("새 글 작성", <DailyWritingModal onSubmit={handleAdd} />);
     };
 
     const handleCardClick = (writing) => {
@@ -113,7 +155,6 @@ export default function DailyWritingPage() {
             toast.success("글이 수정되었습니다.");
 
             const dateParam = selectedDate ? formatDate(selectedDate) : null;
-
             dispatch(fetchDailyWritings({ page, size, selectedDate: dateParam }));
         } catch {
             toast.error("수정에 실패했습니다.");
@@ -129,7 +170,6 @@ export default function DailyWritingPage() {
             toast.success("삭제되었습니다.");
 
             const dateParam = selectedDate ? formatDate(selectedDate) : null;
-
             dispatch(fetchDailyWritings({ page, size, selectedDate: dateParam }));
         } catch {
             toast.error("삭제에 실패했습니다.");
@@ -168,9 +208,6 @@ export default function DailyWritingPage() {
     // ------------------------------------------------
     // Render
     // ------------------------------------------------
-    if (loading) return <LoadingSpinner />;
-    if (error) return <p className="text-red-500 text-center">{error}</p>;
-
     return (
         <div className="space-y-6">
             <div className="flex justify-end gap-2">
